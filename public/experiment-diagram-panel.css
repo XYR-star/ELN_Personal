@@ -4,6 +4,7 @@
 
 .experiment-diagram-preview {
   min-height: 160px;
+  max-height: 420px;
   border: 1px solid #d5dde3;
   border-radius: 4px;
   background: #fff;
@@ -73,6 +74,10 @@
 }
 
 @media (max-width: 768px) {
+  .experiment-diagram-preview {
+    max-height: 260px;
+  }
+
   .experiment-diagram-dialog {
     width: 100vw;
     height: 100vh;

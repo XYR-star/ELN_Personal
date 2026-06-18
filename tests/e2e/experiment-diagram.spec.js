@@ -124,6 +124,44 @@ test('experiment diagram editor opens without saving changes', async ({ page }) 
   }
 });
 
+test('experiment diagram preview stays compact for tall diagrams', async ({ page }) => {
+  await page.goto('/dashboard.php');
+  await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E compact diagram ${Date.now()}`);
+
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+    await page.evaluate(async (id) => {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const headers = {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
+      };
+      const response = await fetch(`/experiment-diagram-api.php?id=${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          scene: {
+            elements: [],
+            appState: { viewBackgroundColor: '#ffffff' },
+            files: {}
+          },
+          preview_svg: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900"><rect width="1200" height="900" fill="white"/><text x="40" y="80">tall diagram</text></svg>'
+        })
+      });
+      if (!response.ok) throw new Error(`Failed to seed compact preview: ${response.status}`);
+    }, experimentId);
+
+    await page.reload({ waitUntil: 'networkidle' });
+
+    const previewBox = await page.locator('[data-experiment-diagram-preview]').boundingBox();
+    expect(previewBox?.height).toBeLessThanOrEqual(430);
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
+});
+
 test('experiment diagram API saves and restores a local scene', async ({ page }) => {
   await page.goto('/dashboard.php');
   await loginIfNeeded(page);
@@ -211,7 +249,21 @@ test('mobile quick upload attaches a file through the native uploads API', async
       buffer: Buffer.from('mobile quick upload smoke test\n')
     });
 
-    await page.waitForLoadState('domcontentloaded');
+    await expect.poll(async () => page.evaluate(async ({ id, name }) => {
+      const response = await fetch(`/api/v2/experiments/${id}/uploads`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!response.ok) return false;
+      const uploads = await response.json();
+      return uploads.some((item) => item.real_name === name);
+    }, {
+      id: experimentId,
+      name: fileName
+    }), {
+      timeout: 20000
+    }).toBe(true);
+
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}#filesDiv`, { waitUntil: 'networkidle' });
     await expect(page.locator('#filesDiv')).toContainText(fileName);
 
     const cleanup = await page.evaluate(async ({ id, name }) => {
