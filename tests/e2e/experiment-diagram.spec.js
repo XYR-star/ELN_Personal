@@ -64,12 +64,9 @@ async function createTempExperiment(page, title) {
 }
 
 async function deleteTempExperiment(page, id) {
-  await page.evaluate(async (experimentId) => {
-    await fetch(`/api/v2/experiments/${experimentId}`, {
-      method: 'DELETE',
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    });
-  }, id);
+  await page.request.delete(`/api/v2/experiments/${id}`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  });
 }
 
 loadLocalEnv();
@@ -96,6 +93,39 @@ test('experiment edit page exposes a local diagram panel above main text', async
     const diagramTop = await page.locator('[data-experiment-diagram-root]').boundingBox();
     const bodyTop = await mainTextHeading.boundingBox();
     expect(diagramTop?.y).toBeLessThan(bodyTop?.y ?? 0);
+    expect(errors).toEqual([]);
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
+});
+
+test('experiment edit page saves lightweight Google Drive links', async ({ page }) => {
+  const errors = collectPageErrors(page);
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E drive links ${Date.now()}`);
+
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
+
+    const panel = page.locator('[data-drive-links-root]');
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText(/Drive files|Drive 文件/);
+
+    await page.locator('[data-drive-link-add]').dispatchEvent('click');
+    await page.locator('[data-drive-link-title]').fill('Raw microscopy images');
+    await page.locator('[data-drive-link-url]').fill('https://drive.google.com/file/d/abc123/view?usp=sharing');
+    await page.locator('[data-drive-link-note]').fill('day 1 images');
+    await page.locator('[data-drive-link-save]').dispatchEvent('click');
+
+    await expect(panel.locator('[data-drive-link-card]')).toContainText('Raw microscopy images');
+    await expect(panel.locator('[data-drive-link-card]')).toContainText('drive.google.com');
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('[data-drive-link-card]')).toContainText('Raw microscopy images');
+
+    await page.locator('[data-drive-link-delete]').dispatchEvent('click');
+    await expect(page.locator('[data-drive-link-card]')).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
     await deleteTempExperiment(page, experimentId);

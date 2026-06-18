@@ -10,6 +10,7 @@ This repository keeps the lightweight add-ons and template overrides used on top
 - Experiment planner embedded into eLabFTW.
 - Visual freezer/storage map linked to eLabFTW resources.
 - Experiment diagram panel for drawing workflow sketches above the main text.
+- Lightweight Google Drive file links on experiment edit pages.
 - Smoke tests for the key browser flows.
 
 The repository stores code only. Runtime data, uploaded files, database contents, login sessions, generated reports, and server secrets stay on the server and are not committed.
@@ -26,6 +27,7 @@ The repository stores code only. Runtime data, uploaded files, database contents
 ├── storage-map.html             # Visual storage map shell
 ├── storage-view-edit.html       # Resource storage panel override
 ├── experiment-diagram.html      # Diagram panel shell
+├── drive-links.html             # Lightweight Drive link panel shell
 ├── *-api.php                    # eLabFTW-side PHP API endpoints
 ├── public/                      # Browser assets and built diagram bundle
 ├── src/                         # JS source modules
@@ -70,6 +72,12 @@ The diagram panel provides a local drawing board for experiment schematics. It i
 
 实验画板是本地嵌入的示意图工具，用于在实验正文上方画流程图或操作示意，不依赖 Excalidraw 云同步。
 
+### Drive Links
+
+Experiment edit pages include a lightweight Drive files panel. It stores Google Drive or Google Docs URLs as structured links in the eLabFTW database, so raw data folders, Google Sheets, images, and analysis files can be opened from the experiment without OAuth sync.
+
+这是轻量引用，不同步 Google Drive 文件内容，也不保存 Google 登录授权；系统只保存标题、链接和备注。
+
 ## Development
 
 Install dependencies:
@@ -106,6 +114,9 @@ Current important override:
 
 ```text
 /www/elabftw-data/overrides/head.html
+/www/elabftw-data/overrides/edit.html
+/www/elabftw-data/overrides/drive-links.html
+/www/elabftw-data/overrides/drive-links-api.php
 /www/elabftw-data/overrides/storage-map.html
 /www/elabftw-data/overrides/storage-view-edit.html
 ```

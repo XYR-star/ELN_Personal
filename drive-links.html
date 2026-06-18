@@ -1,0 +1,47 @@
+<section class='drive-links-panel mb-4' data-drive-links-root data-entity-type='{{ Entity.entityType.value }}' data-entity-id='{{ Entity.id }}' data-api-base='/drive-links-api.php'>
+  <div class='d-flex flex-wrap justify-content-between align-items-center mb-2'>
+    <h3 class='d-inline togglable-section-title mb-0'>
+      <i class='fab fa-google-drive fa-fw mr-2'></i>{{ App.getLang() starts with 'zh' ? 'Drive 文件' : 'Drive files' }}
+    </h3>
+    <button type='button' class='btn btn-secondary' data-drive-link-add>
+      <i class='fas fa-link fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '添加 Drive 链接' : 'Add Drive link' }}
+    </button>
+  </div>
+  <div class='drive-links-list' data-drive-links-list>
+    <div class='drive-links-empty text-muted' data-drive-links-empty>
+      {{ App.getLang() starts with 'zh' ? '还没有关联 Google Drive 文件。' : 'No Google Drive files linked yet.' }}
+    </div>
+  </div>
+  <div class='alert alert-danger mt-2 mb-0' hidden data-drive-links-error></div>
+</section>
+
+<dialog class='drive-links-dialog' data-drive-links-dialog>
+  <form method='dialog' class='drive-links-form' data-drive-links-form>
+    <div class='drive-links-dialog-header'>
+      <h2 class='mb-0'>{{ App.getLang() starts with 'zh' ? '添加 Drive 链接' : 'Add Drive link' }}</h2>
+      <button type='button' class='btn btn-secondary' data-drive-link-close aria-label='{{ 'Close'|trans }}'>
+        <i class='fas fa-times fa-fw'></i>
+      </button>
+    </div>
+    <div class='form-group mt-3'>
+      <label for='drive-link-title'>{{ App.getLang() starts with 'zh' ? '标题' : 'Title' }}</label>
+      <input id='drive-link-title' class='form-control' data-drive-link-title placeholder='Raw images, analysis sheet, sequencing results'>
+    </div>
+    <div class='form-group'>
+      <label for='drive-link-url'>{{ App.getLang() starts with 'zh' ? 'Google Drive 链接' : 'Google Drive URL' }}</label>
+      <input id='drive-link-url' class='form-control' data-drive-link-url type='url' required placeholder='https://drive.google.com/...'>
+    </div>
+    <div class='form-group'>
+      <label for='drive-link-note'>{{ App.getLang() starts with 'zh' ? '备注' : 'Note' }}</label>
+      <textarea id='drive-link-note' class='form-control' rows='3' data-drive-link-note></textarea>
+    </div>
+    <div class='d-flex justify-content-end'>
+      <button type='button' class='btn btn-primary' data-drive-link-save>
+        <i class='fas fa-save fa-fw mr-1'></i>{{ 'Save'|trans }}
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<link rel='stylesheet' href='/planner-assets/drive-links.css?v=20260618-drive1'>
+<script defer src='/planner-assets/drive-links.js?v=20260618-drive1'></script>
