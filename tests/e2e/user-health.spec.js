@@ -36,14 +36,14 @@ async function loginIfNeeded(page) {
   await page.locator('input[type="email"], input[name="email"], input[name="userid"], input[name="login"]').filter({ visible: true }).first().fill(email);
   await page.locator('input[type="password"]').filter({ visible: true }).first().fill(password);
   await page.getByRole('button', { name: /^login$/i }).or(page.locator('button[type="submit"], input[type="submit"]').filter({ visible: true })).first().click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await expect(page).not.toHaveURL(/login|logout/);
 }
 
 async function openAuthed(page, path) {
-  await page.goto(path);
+  await page.goto(path, { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 async function dispatchVisibleClick(locator) {

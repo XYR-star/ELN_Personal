@@ -36,7 +36,7 @@ async function loginIfNeeded(page) {
   await page.locator('input[type="email"], input[name="email"], input[name="userid"], input[name="login"]').filter({ visible: true }).first().fill(email);
   await page.locator('input[type="password"]').filter({ visible: true }).first().fill(password);
   await page.getByRole('button', { name: /^login$/i }).or(page.locator('button[type="submit"], input[type="submit"]').filter({ visible: true })).first().click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await expect(page).not.toHaveURL(/login|logout/);
 }
 
@@ -81,12 +81,12 @@ if (existsSync(authFile)) {
 
 test('experiment edit page exposes a local diagram panel above main text', async ({ page }) => {
   const errors = collectPageErrors(page);
-  await page.goto('/dashboard.php');
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
   const experimentId = await createTempExperiment(page, `E2E diagram panel ${Date.now()}`);
 
   try {
-    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('[data-experiment-diagram-root]')).toBeVisible();
     await expect(page.locator('[data-experiment-diagram-root]')).toContainText(/Experiment diagram|实验流程图/);
@@ -104,12 +104,12 @@ test('experiment edit page exposes a local diagram panel above main text', async
 
 test('experiment diagram editor opens without saving changes', async ({ page }) => {
   const errors = collectPageErrors(page);
-  await page.goto('/dashboard.php');
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
   const experimentId = await createTempExperiment(page, `E2E diagram editor ${Date.now()}`);
 
   try {
-    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
 
     const openButton = page.locator('[data-experiment-diagram-open]');
     await expect(openButton).toBeVisible();
@@ -125,12 +125,12 @@ test('experiment diagram editor opens without saving changes', async ({ page }) 
 });
 
 test('experiment diagram preview stays compact for tall diagrams', async ({ page }) => {
-  await page.goto('/dashboard.php');
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
   const experimentId = await createTempExperiment(page, `E2E compact diagram ${Date.now()}`);
 
   try {
-    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
     await page.evaluate(async (id) => {
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       const headers = {
@@ -153,7 +153,7 @@ test('experiment diagram preview stays compact for tall diagrams', async ({ page
       if (!response.ok) throw new Error(`Failed to seed compact preview: ${response.status}`);
     }, experimentId);
 
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
 
     const previewMetrics = await page.locator('[data-experiment-diagram-preview]').evaluate((element) => {
       const svg = element.querySelector('svg');
@@ -177,12 +177,12 @@ test('experiment diagram preview stays compact for tall diagrams', async ({ page
 });
 
 test('experiment diagram API saves and restores a local scene', async ({ page }) => {
-  await page.goto('/dashboard.php');
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
   const experimentId = await createTempExperiment(page, `E2E diagram API ${Date.now()}`);
 
   try {
-    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
 
     const result = await page.evaluate(async (id) => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -243,12 +243,12 @@ test('experiment diagram API saves and restores a local scene', async ({ page })
 
 test('mobile quick upload attaches a file through the native uploads API', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/dashboard.php');
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
   const experimentId = await createTempExperiment(page, `E2E mobile upload ${Date.now()}`);
 
   try {
-    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
 
     const fileName = `mobile-quick-upload-${Date.now()}.txt`;
     await expect(page.locator('[data-mobile-quick-upload]')).toBeVisible();
@@ -277,7 +277,7 @@ test('mobile quick upload attaches a file through the native uploads API', async
       timeout: 20000
     }).toBe(true);
 
-    await page.goto(`/experiments.php?mode=edit&id=${experimentId}#filesDiv`, { waitUntil: 'networkidle' });
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}#filesDiv`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#filesDiv')).toContainText(fileName);
 
     const cleanup = await page.evaluate(async ({ id, name }) => {

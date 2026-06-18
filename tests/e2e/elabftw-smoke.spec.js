@@ -53,7 +53,7 @@ async function loginIfNeeded(page) {
   await passwordInput.fill(password);
   const loginButton = page.getByRole('button', { name: /^login$/i }).or(page.locator('button[type="submit"], input[type="submit"]').filter({ visible: true })).first();
   await loginButton.click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await expect(page).not.toHaveURL(/login|logout/);
 }
 
@@ -63,7 +63,7 @@ if (existsSync(authFile)) {
 
 test('Planner renders calendar, selected list, and no browser errors', async ({ page }) => {
   const errors = await collectPageErrors(page);
-  await page.goto('/planner.php');
+  await page.goto('/planner.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
 
   await expect(page.locator('[data-planner-root]')).toBeVisible();
@@ -77,7 +77,7 @@ test('Planner renders calendar, selected list, and no browser errors', async ({ 
 
 test('Storage map renders main panels and no browser errors', async ({ page }) => {
   const errors = await collectPageErrors(page);
-  await page.goto('/storage-map.php');
+  await page.goto('/storage-map.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
 
   await expect(page.locator('[data-storage-map-root]')).toBeVisible();
@@ -90,7 +90,7 @@ test('Storage map renders main panels and no browser errors', async ({ page }) =
 
 test('Personal navigation hides team/all scopes and labels storage as inventory', async ({ page }) => {
   const errors = await collectPageErrors(page);
-  await page.goto('/dashboard.php');
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
 
   await expect(page.locator('#scopeExp button')).toBeDisabled();
