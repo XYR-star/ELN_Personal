@@ -1,0 +1,6 @@
+{# Personal mode override: keep dashboard scope fixed to Self and avoid multi-user scope dropdown noise. #}
+<div id='{{ btnId|default('scopeBtn') }}' class='btn-group'>
+  <button class='btn color-medium hl-hover-gray' type='button' aria-label='{{ 'Scope'|trans }}: {{ 'Self'|trans }}' title='{{ 'Scope'|trans }}: {{ 'Self'|trans }}' disabled>
+    <i class='fas fa-user fa-fw mr-1'></i>
+  </button>
+</div>

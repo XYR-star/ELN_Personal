@@ -93,6 +93,13 @@ test('Personal navigation hides team/all scopes and labels storage as inventory'
   await page.goto('/dashboard.php');
   await loginIfNeeded(page);
 
+  await expect(page.locator('#scopeExp button')).toBeDisabled();
+  await expect(page.locator('#scopeItems button')).toBeDisabled();
+  await expect(page.locator('#scopeExp .dropdown-menu')).toHaveCount(0);
+  await expect(page.locator('#scopeItems .dropdown-menu')).toHaveCount(0);
+  await expect(page.locator('#scopeExp')).not.toContainText(/Team|Everything/i);
+  await expect(page.locator('#scopeItems')).not.toContainText(/Team|Everything/i);
+
   const experimentsDropdown = page.locator('#navExperimentsDropdown');
   await expect(experimentsDropdown).toBeVisible();
   await experimentsDropdown.dispatchEvent('click');

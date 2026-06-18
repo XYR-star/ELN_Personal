@@ -50,6 +50,13 @@
             </div>
           </li>
           <li class='list-group-item d-flex align-items-center'>
+            <i class='fas fa-user fa-fw mr-2 text-muted'></i>
+            <div>
+              <strong>{{ App.getLang() starts with 'zh' ? 'Scope 下拉范围' : 'Scope dropdowns' }}</strong>
+              <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? 'Dashboard 里的 Scope 只保留 Self，不再展开 Team 和 Everything。' : 'Dashboard scope controls are fixed to Self and no longer expand to Team or Everything.' }}</div>
+            </div>
+          </li>
+          <li class='list-group-item d-flex align-items-center'>
             <i class='far fa-bell fa-fw mr-2 text-muted'></i>
             <div>
               <strong>{{ App.getLang() starts with 'zh' ? '通知铃铛' : 'Notification bell' }}</strong>
