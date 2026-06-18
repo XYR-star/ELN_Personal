@@ -7,6 +7,7 @@ const apiBase = root?.dataset.apiBase || '/storage-map-api.php';
 
 const state = {
   locations: [],
+  categories: [],
   initialItemId: Number(root?.dataset.initialItemId || 0),
   initialItem: null,
   selectedLocationId: null,
@@ -49,6 +50,15 @@ function formData(form) {
 
 function itemField() {
   return $('#storage-item-id') || $('#storage-item-select');
+}
+
+function categoryField() {
+  return $('#storage-category-filter');
+}
+
+function selectedCategoryId() {
+  const value = categoryField()?.value || '';
+  return value ? Number(value) : 0;
 }
 
 function ensureItemPicker() {
@@ -152,6 +162,21 @@ async function loadInitialItem() {
   state.initialItem = items[0] || null;
 }
 
+async function loadCategories() {
+  state.categories = await api('categories');
+  renderCategoryOptions();
+}
+
+function renderCategoryOptions() {
+  const select = categoryField();
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">全部分类</option>' + state.categories.map((category) => (
+    `<option value="${category.id}">${escapeHtml(category.title)}</option>`
+  )).join('');
+  select.value = state.categories.some((category) => Number(category.id) === Number(current)) ? current : '';
+}
+
 async function selectLocation(locationId) {
   state.selectedLocationId = Number(locationId);
   state.selectedSlot = null;
@@ -244,7 +269,9 @@ function openAssignmentDialog(slot) {
   form.reset();
   const selectedItem = slot.assignment ? {
     id: slot.assignment.item_id,
-    title: slot.assignment.item_title
+    title: slot.assignment.item_title,
+    category_id: slot.assignment.item_category_id,
+    category_title: slot.assignment.item_category_title || ''
   } : state.initialItem;
   form.location_id.value = state.selectedLocationId;
   form.slot_code.value = slot.code;
@@ -253,6 +280,9 @@ function openAssignmentDialog(slot) {
   form.qty_stored.value = slot.assignment?.qty_stored || '1';
   form.qty_unit.value = slot.assignment?.qty_unit || 'tube';
   form.note.value = slot.assignment?.note || '';
+  if (categoryField()) {
+    categoryField().value = selectedItem?.category_id || '';
+  }
   $('#storage-assignment-title').textContent = `填入孔位 ${slot.code}`;
   $('#storage-item-search').value = selectedItem?.title || '';
   showAssignmentError('');
@@ -333,7 +363,8 @@ async function showSlot(slot) {
 }
 
 async function searchItems(query = '') {
-  const items = await api(`items?q=${encodeURIComponent(query)}`);
+  const categoryId = selectedCategoryId();
+  const items = await api(`items?q=${encodeURIComponent(query)}${categoryId ? `&category_id=${categoryId}` : ''}`);
   renderItemResults(items, query);
 }
 
@@ -344,7 +375,7 @@ function updateItemSelection(item = null) {
   const selection = $('#storage-item-selection');
   if (selection) {
     selection.textContent = item
-      ? `已选择：${item.title} · #${item.id}`
+      ? `已选择：${item.title} · #${item.id}${item.category_title ? ` · ${item.category_title}` : ''}`
       : '搜索并选择一个 Resource。';
   }
   $$('.storage-item-result').forEach((button) => {
@@ -364,26 +395,28 @@ function renderItemResults(items = [], query = '') {
   }
   const trimmedQuery = query.trim();
   resultList.innerHTML = results.length ? results.map((item) => `
-    <button class="storage-item-result${item.selected ? ' active' : ''}" data-item-id="${item.id}" data-item-title="${escapeHtml(item.title)}" type="button" role="option" aria-selected="${item.selected ? 'true' : 'false'}">
+    <button class="storage-item-result${item.selected ? ' active' : ''}" data-item-id="${item.id}" data-item-title="${escapeHtml(item.title)}" data-category-id="${item.category_id || ''}" data-category-title="${escapeHtml(item.category_title || '')}" type="button" role="option" aria-selected="${item.selected ? 'true' : 'false'}">
       <strong>${escapeHtml(item.title)}</strong>
-      <span>#${item.id}</span>
+      <span>#${item.id}${item.category_title ? ` · ${escapeHtml(item.category_title)}` : ''}</span>
     </button>
   `).join('') : `
     <div class="storage-item-empty">
       ${trimmedQuery ? `没有找到“${escapeHtml(trimmedQuery)}”。` : '暂无可选 Resource。'}
-      ${trimmedQuery ? `<button class="btn btn-primary btn-sm mt-2" id="storage-create-item-from-query" type="button">新建 Resource：${escapeHtml(trimmedQuery)}</button>` : '<span>可以先输入样品名搜索或新建。</span>'}
+      ${trimmedQuery ? `<button class="btn btn-primary btn-sm mt-2" id="storage-create-item-from-query" type="button">新建 Resource：${escapeHtml(trimmedQuery)}${selectedCategoryId() ? ` · ${escapeHtml(categoryField()?.selectedOptions[0]?.textContent || '')}` : ''}</button>` : '<span>可以先输入样品名搜索或新建。</span>'}
     </div>
   `;
   $$('.storage-item-result').forEach((button) => button.addEventListener('click', () => {
     updateItemSelection({
       id: button.dataset.itemId,
-      title: button.dataset.itemTitle
+      title: button.dataset.itemTitle,
+      category_id: button.dataset.categoryId || null,
+      category_title: button.dataset.categoryTitle || ''
     });
   }));
   $('#storage-create-item-from-query')?.addEventListener('click', async () => {
     const item = await api('items', {
       method: 'POST',
-      body: JSON.stringify({ title: trimmedQuery })
+      body: JSON.stringify({ title: trimmedQuery, category_id: selectedCategoryId() || null })
     });
     $('#storage-item-search').value = item.title;
     renderItemResults([item], item.title);
@@ -423,11 +456,19 @@ function bindControls() {
     if (id) await selectLocation(Number(id));
   });
   $('#storage-item-search').addEventListener('input', (event) => searchItems(event.target.value));
+  categoryField()?.addEventListener('change', () => {
+    const field = itemField();
+    if (field) field.value = '';
+    updateItemSelection(null);
+    searchItems($('#storage-item-search').value);
+  });
   $('#storage-assignment-dialog').addEventListener('toggle', (event) => {
     if (!event.target.open) return;
     const selectedItem = state.selectedSlot?.assignment ? {
       id: state.selectedSlot.assignment.item_id,
-      title: state.selectedSlot.assignment.item_title
+      title: state.selectedSlot.assignment.item_title,
+      category_id: state.selectedSlot.assignment.item_category_id,
+      category_title: state.selectedSlot.assignment.item_category_title || ''
     } : state.initialItem;
     if (selectedItem) {
       renderItemResults([selectedItem], selectedItem.title);
@@ -460,6 +501,7 @@ function bindControls() {
 
 bindControls();
 async function init() {
+  await loadCategories();
   await loadInitialItem();
   await loadLocations();
 }

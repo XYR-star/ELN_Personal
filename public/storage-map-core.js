@@ -70,6 +70,9 @@ export function prepareStorageItemResults(items = [], selectedItemId = null) {
   return items.map((item) => ({
     id: Number(item.id),
     title: String(item.title || `Resource #${item.id}`),
+    category_id: item.category_id === null || item.category_id === undefined ? null : Number(item.category_id),
+    category_title: item.category_title ? String(item.category_title) : '',
+    category_color: item.category_color ? String(item.category_color) : '',
     selected: selected !== null && Number(item.id) === selected
   }));
 }

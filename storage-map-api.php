@@ -344,12 +344,29 @@ function storageAssertItem(Db $Db, int $team, int $itemId): void
     }
 }
 
-function storageCreateItem(Db $Db, int $team, int $userId, string $title): array
+function storageCategory(Db $Db, int $team, ?int $categoryId): ?array
+{
+    if (!$categoryId) {
+        return null;
+    }
+    $req = $Db->prepare('SELECT id, title, color FROM items_categories WHERE id = :id AND team = :team AND state = 1');
+    $req->bindValue(':id', $categoryId, PDO::PARAM_INT);
+    $req->bindValue(':team', $team, PDO::PARAM_INT);
+    $Db->execute($req);
+    $category = $req->fetch();
+    if (!$category) {
+        throw new Exception('Resource category not found');
+    }
+    return $category;
+}
+
+function storageCreateItem(Db $Db, int $team, int $userId, string $title, ?int $categoryId = null): array
 {
     $title = trim($title);
     if ($title === '') {
         throw new Exception('Resource title is required');
     }
+    $category = storageCategory($Db, $team, $categoryId);
 
     $emptyCan = '{"teams": [], "users": [], "teamgroups": []}';
     $req = $Db->prepare('INSERT INTO items(team, title, date, body, userid, category, elabid, canread_base, canwrite_base, canbook_base, canread, canwrite, canread_is_immutable, canwrite_is_immutable, canbook, metadata, custom_id, content_type, rating, hide_main_text, status)
@@ -359,7 +376,7 @@ function storageCreateItem(Db $Db, int $team, int $userId, string $title): array
     $req->bindValue(':date', date('Y-m-d'));
     $req->bindValue(':body', null, PDO::PARAM_NULL);
     $req->bindValue(':userid', $userId, PDO::PARAM_INT);
-    $req->bindValue(':category', null, PDO::PARAM_NULL);
+    $req->bindValue(':category', $category ? (int) $category['id'] : null, $category ? PDO::PARAM_INT : PDO::PARAM_NULL);
     $req->bindValue(':elabid', Tools::generateElabid());
     $req->bindValue(':canread_base', 30, PDO::PARAM_INT);
     $req->bindValue(':canwrite_base', 20, PDO::PARAM_INT);
@@ -373,7 +390,13 @@ function storageCreateItem(Db $Db, int $team, int $userId, string $title): array
     $Db->execute($req);
 
     $id = (int) $Db->lastInsertId();
-    return array('id' => $id, 'title' => mb_substr($title, 0, 255));
+    return array(
+        'id' => $id,
+        'title' => mb_substr($title, 0, 255),
+        'category_id' => $category ? (int) $category['id'] : null,
+        'category_title' => $category['title'] ?? null,
+        'category_color' => $category['color'] ?? null,
+    );
 }
 
 function storageMovement(Db $Db, int $team, int $userId, array $data): void
@@ -471,23 +494,43 @@ try {
         $childrenReq->bindValue(':id', $location['id'], PDO::PARAM_INT);
         $childrenReq->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($childrenReq);
-        $assignReq = $Db->prepare('SELECT a.*, i.title AS item_title FROM ricky_storage_assignments a JOIN items i ON i.id = a.item_id WHERE a.location_id = :id AND a.team = :team ORDER BY a.slot_code ASC');
+        $assignReq = $Db->prepare('SELECT a.*, i.title AS item_title, i.category AS item_category_id, c.title AS item_category_title, c.color AS item_category_color
+            FROM ricky_storage_assignments a
+            JOIN items i ON i.id = a.item_id
+            LEFT JOIN items_categories c ON c.id = i.category AND c.team = i.team
+            WHERE a.location_id = :id AND a.team = :team
+            ORDER BY a.slot_code ASC');
         $assignReq->bindValue(':id', $location['id'], PDO::PARAM_INT);
         $assignReq->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($assignReq);
         storageJson($Response, array('location' => $location, 'children' => $childrenReq->fetchAll(), 'assignments' => $assignReq->fetchAll()));
+    } elseif ($method === 'GET' && $parts === array('categories')) {
+        $req = $Db->prepare('SELECT id, title, color FROM items_categories WHERE team = :team AND state = 1 ORDER BY ordering IS NULL ASC, ordering ASC, title ASC');
+        $req->bindValue(':team', $team, PDO::PARAM_INT);
+        $Db->execute($req);
+        storageJson($Response, $req->fetchAll());
     } elseif ($method === 'GET' && $parts === array('items')) {
         $itemId = (int) $Request->query->get('item_id', 0);
+        $categoryId = (int) $Request->query->get('category_id', 0);
         $q = '%' . trim((string) $Request->query->get('q', '')) . '%';
-        $req = $Db->prepare('SELECT id, title, date FROM items WHERE team = :team AND state = 1 AND (:item_id = 0 OR id = :item_id) AND title LIKE :q ORDER BY modified_at DESC LIMIT 30');
+        $req = $Db->prepare('SELECT i.id, i.title, i.date, i.category AS category_id, c.title AS category_title, c.color AS category_color
+            FROM items i
+            LEFT JOIN items_categories c ON c.id = i.category AND c.team = i.team
+            WHERE i.team = :team
+              AND i.state = 1
+              AND (:item_id = 0 OR i.id = :item_id)
+              AND (:category_id = 0 OR i.category = :category_id)
+              AND i.title LIKE :q
+            ORDER BY i.modified_at DESC LIMIT 30');
         $req->bindValue(':team', $team, PDO::PARAM_INT);
         $req->bindValue(':item_id', $itemId, PDO::PARAM_INT);
+        $req->bindValue(':category_id', $categoryId, PDO::PARAM_INT);
         $req->bindValue(':q', $q);
         $Db->execute($req);
         storageJson($Response, $req->fetchAll());
     } elseif ($method === 'POST' && $parts === array('items')) {
         $body = storageBody();
-        storageJson($Response, storageCreateItem($Db, $team, $userId, (string) ($body['title'] ?? '')), 201);
+        storageJson($Response, storageCreateItem($Db, $team, $userId, (string) ($body['title'] ?? ''), storageInt($body['category_id'] ?? null)), 201);
     } elseif ($method === 'POST' && $parts === array('assignments')) {
         $body = storageBody();
         $location = storageLocation($Db, $team, (int) ($body['location_id'] ?? 0));

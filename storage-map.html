@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/storage-map.css?v=20260618-native-sync1'>
+<link rel='stylesheet' href='/planner-assets/storage-map.css?v=20260618-category1'>
 
 <div class='storage-map-page' data-storage-map-root data-api-base='/storage-map-api.php' data-initial-item-id='{{ initialItemId|default(0) }}'>
   <div class='d-flex align-items-center justify-content-between mb-3'>
@@ -94,7 +94,16 @@
     <input name='location_id' type='hidden'>
     <input name='slot_code' type='hidden'>
     <div class='form-group'>
-      <label>搜索 Resource<input class='form-control' id='storage-item-search' autocomplete='off' placeholder='HEK293T, plasmid, antibody'></label>
+      <div class='form-row'>
+        <label class='col-md-4'>Resource 分类
+          <select class='form-control' id='storage-category-filter' name='category_id'>
+            <option value=''>全部分类</option>
+          </select>
+        </label>
+        <label class='col-md-8'>搜索 Resource
+          <input class='form-control' id='storage-item-search' autocomplete='off' placeholder='HEK293T, plasmid, antibody'>
+        </label>
+      </div>
       <input name='item_id' id='storage-item-id' type='hidden' required>
       <div id='storage-item-results' class='storage-item-results' role='listbox' aria-label='Resource 搜索结果'></div>
       <p id='storage-item-selection' class='storage-item-selection text-muted mb-0'>搜索并选择一个 Resource。</p>
@@ -113,5 +122,5 @@
   </form>
 </dialog>
 
-<script type='module' src='/planner-assets/storage-map-app.js?v=20260618-native-sync1'></script>
+<script type='module' src='/planner-assets/storage-map-app.js?v=20260618-category1'></script>
 {% endblock %}

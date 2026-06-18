@@ -47,11 +47,11 @@ test('validateSlotCode accepts only slots inside a layout', () => {
 test('prepareStorageItemResults marks the selected eLabFTW resource', () => {
   const results = prepareStorageItemResults([
     { id: 7, title: 'HEK293T P12' },
-    { id: 8, title: 'Plasmid pCMV' }
+    { id: 8, title: 'Plasmid pCMV', category_id: 3, category_title: 'Plasmid', category_color: '29aeb9' }
   ], 8);
 
   assert.deepEqual(results, [
-    { id: 7, title: 'HEK293T P12', selected: false },
-    { id: 8, title: 'Plasmid pCMV', selected: true }
+    { id: 7, title: 'HEK293T P12', category_id: null, category_title: '', category_color: '', selected: false },
+    { id: 8, title: 'Plasmid pCMV', category_id: 3, category_title: 'Plasmid', category_color: '29aeb9', selected: true }
   ]);
 });

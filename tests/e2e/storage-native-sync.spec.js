@@ -65,15 +65,21 @@ test('visual storage assignment appears in the native resource storage panel', a
   let drawer;
   let box;
   let assignment;
+  let category;
 
   await openAuthed(page, '/storage-map.php');
 
   try {
+    const categories = await storageApi(page, 'categories');
+    expect(categories.length).toBeGreaterThan(0);
+    category = categories[0];
+
     const item = await storageApi(page, 'items', {
       method: 'POST',
-      body: JSON.stringify({ title: resourceTitle })
+      body: JSON.stringify({ title: resourceTitle, category_id: category.id })
     });
     itemId = item.id;
+    expect(item.category_id).toBe(category.id);
 
     freezer = await storageApi(page, 'locations', {
       method: 'POST',
@@ -111,7 +117,9 @@ test('visual storage assignment appears in the native resource storage panel', a
     await expect(page.locator('#storage-selected-name')).toContainText('盒子 A1');
     await page.locator('.storage-slot-cell[data-slot-code="A2"]').dispatchEvent('click');
     await page.locator('#storage-assign-slot').dispatchEvent('click');
+    await expect(page.locator('#storage-category-filter')).toHaveValue(String(category.id));
     await expect(page.locator('#storage-item-selection')).toContainText(resourceTitle);
+    await expect(page.locator('#storage-item-selection')).toContainText(category.title);
   } finally {
     if (assignment?.id) await storageApi(page, `assignments/${assignment.id}`, { method: 'DELETE' }).catch(() => {});
     if (box?.id) await storageApi(page, `locations/${box.id}`, { method: 'DELETE' }).catch(() => {});
