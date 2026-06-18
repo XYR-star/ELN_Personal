@@ -1,0 +1,31 @@
+.mobile-quick-upload {
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+  background: #fff;
+  display: none;
+  padding: 16px;
+}
+
+.mobile-quick-upload .btn {
+  min-height: 44px;
+}
+
+@media (max-width: 767.98px) {
+  .mobile-quick-upload {
+    display: block;
+    margin-left: -2px;
+    margin-right: -2px;
+    padding: 14px;
+  }
+
+  .mobile-quick-upload-actions {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .mobile-quick-upload-actions .btn {
+    width: 100%;
+    border-radius: 4px !important;
+  }
+}

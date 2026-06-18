@@ -40,6 +40,38 @@ async function loginIfNeeded(page) {
   await expect(page).not.toHaveURL(/login|logout/);
 }
 
+async function createTempExperiment(page, title) {
+  const result = await page.evaluate(async (experimentTitle) => {
+    const headers = {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/json'
+    };
+    const response = await fetch('/api/v2/experiments', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ title: experimentTitle, body: '<p>temporary e2e experiment</p>' })
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to create experiment (${response.status}): ${text.slice(0, 200)}`);
+    }
+    const location = response.headers.get('location') || '';
+    const id = Number(location.match(/\/experiments\/(\d+)/)?.[1] || location.match(/(\d+)$/)?.[1]);
+    if (!id) throw new Error(`Could not parse experiment id from Location: ${location}`);
+    return { id };
+  }, title);
+  return result.id;
+}
+
+async function deleteTempExperiment(page, id) {
+  await page.evaluate(async (experimentId) => {
+    await fetch(`/api/v2/experiments/${experimentId}`, {
+      method: 'DELETE',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+  }, id);
+}
+
 loadLocalEnv();
 
 const authFile = process.env.ELAB_STORAGE_STATE || 'playwright/.auth/elabftw.json';
@@ -49,47 +81,65 @@ if (existsSync(authFile)) {
 
 test('experiment edit page exposes a local diagram panel above main text', async ({ page }) => {
   const errors = collectPageErrors(page);
-  await page.goto('/experiments.php?mode=edit&id=1');
+  await page.goto('/dashboard.php');
   await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E diagram panel ${Date.now()}`);
 
-  await expect(page.locator('[data-experiment-diagram-root]')).toBeVisible();
-  await expect(page.locator('[data-experiment-diagram-root]')).toContainText(/Experiment diagram|实验流程图/);
-  const mainTextHeading = page.locator('h3[role="button"]').filter({ hasText: /Main text|正文|主要文本/i });
-  await expect(mainTextHeading).toBeVisible();
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
 
-  const diagramTop = await page.locator('[data-experiment-diagram-root]').boundingBox();
-  const bodyTop = await mainTextHeading.boundingBox();
-  expect(diagramTop?.y).toBeLessThan(bodyTop?.y ?? 0);
-  expect(errors).toEqual([]);
+    await expect(page.locator('[data-experiment-diagram-root]')).toBeVisible();
+    await expect(page.locator('[data-experiment-diagram-root]')).toContainText(/Experiment diagram|实验流程图/);
+    const mainTextHeading = page.locator('h3[role="button"]').filter({ hasText: /Main text|正文|主要文本/i });
+    await expect(mainTextHeading).toBeVisible();
+
+    const diagramTop = await page.locator('[data-experiment-diagram-root]').boundingBox();
+    const bodyTop = await mainTextHeading.boundingBox();
+    expect(diagramTop?.y).toBeLessThan(bodyTop?.y ?? 0);
+    expect(errors).toEqual([]);
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
 });
 
 test('experiment diagram editor opens without saving changes', async ({ page }) => {
   const errors = collectPageErrors(page);
-  await page.goto('/experiments.php?mode=edit&id=1');
+  await page.goto('/dashboard.php');
   await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E diagram editor ${Date.now()}`);
 
-  const openButton = page.locator('[data-experiment-diagram-open]');
-  await expect(openButton).toBeVisible();
-  await openButton.dispatchEvent('click');
-  await expect(page.locator('[data-experiment-diagram-dialog]')).toBeVisible();
-  await expect(page.locator('[data-experiment-diagram-canvas] .excalidraw')).toBeVisible();
-  await page.locator('[data-experiment-diagram-close]').dispatchEvent('click');
-  await expect(page.locator('[data-experiment-diagram-dialog]')).not.toBeVisible();
-  expect(errors).toEqual([]);
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+
+    const openButton = page.locator('[data-experiment-diagram-open]');
+    await expect(openButton).toBeVisible();
+    await openButton.dispatchEvent('click');
+    await expect(page.locator('[data-experiment-diagram-dialog]')).toBeVisible();
+    await expect(page.locator('[data-experiment-diagram-canvas] .excalidraw')).toBeVisible();
+    await page.locator('[data-experiment-diagram-close]').dispatchEvent('click');
+    await expect(page.locator('[data-experiment-diagram-dialog]')).not.toBeVisible();
+    expect(errors).toEqual([]);
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
 });
 
 test('experiment diagram API saves and restores a local scene', async ({ page }) => {
-  await page.goto('/experiments.php?mode=edit&id=1');
+  await page.goto('/dashboard.php');
   await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E diagram API ${Date.now()}`);
 
-  const result = await page.evaluate(async () => {
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+
+    const result = await page.evaluate(async (id) => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const headers = {
       'X-Requested-With': 'XMLHttpRequest',
       ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
     };
     const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
-    const url = '/experiment-diagram-api.php?id=1';
+    const url = `/experiment-diagram-api.php?id=${id}`;
     const readJson = async (response) => {
       const data = response.status === 204 ? null : await response.json();
       if (!response.ok) throw new Error(data?.error || `Request failed: ${response.status}`);
@@ -131,7 +181,58 @@ test('experiment diagram API saves and restores a local scene', async ({ page })
         await fetch(url, { method: 'DELETE', headers });
       }
     }
-  });
+  }, experimentId);
 
-  expect(result).toEqual({ savedHasPreview: true, loadedHasPreview: true });
+    expect(result).toEqual({ savedHasPreview: true, loadedHasPreview: true });
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
+});
+
+test('mobile quick upload attaches a file through the native uploads API', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/dashboard.php');
+  await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E mobile upload ${Date.now()}`);
+
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`);
+
+    const fileName = `mobile-quick-upload-${Date.now()}.txt`;
+    await expect(page.locator('[data-mobile-quick-upload]')).toBeVisible();
+    await expect(page.locator('[data-mobile-upload-trigger="image"]')).toBeVisible();
+    await expect(page.locator('[data-mobile-upload-trigger="file"]')).toBeVisible();
+    await expect(page.locator('[data-mobile-upload-input="image"]')).toHaveAttribute('accept', 'image/*');
+    await expect(page.locator('[data-mobile-upload-input="image"]')).toHaveAttribute('capture', 'environment');
+
+    await page.locator('[data-mobile-upload-input="file"]').setInputFiles({
+      name: fileName,
+      mimeType: 'text/plain',
+      buffer: Buffer.from('mobile quick upload smoke test\n')
+    });
+
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('#filesDiv')).toContainText(fileName);
+
+    const cleanup = await page.evaluate(async ({ id, name }) => {
+      const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+      const uploadsResponse = await fetch(`/api/v2/experiments/${id}/uploads`, { headers });
+      if (!uploadsResponse.ok) return { deleted: false, reason: `read ${uploadsResponse.status}` };
+      const uploads = await uploadsResponse.json();
+      const upload = uploads.find((item) => item.real_name === name);
+      if (!upload) return { deleted: false, reason: 'not found' };
+      const deleteResponse = await fetch(`/api/v2/experiments/${id}/uploads/${upload.id}`, {
+        method: 'DELETE',
+        headers
+      });
+      return { deleted: deleteResponse.ok, status: deleteResponse.status };
+    }, {
+      id: experimentId,
+      name: fileName
+    });
+
+    expect(cleanup.deleted).toBe(true);
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
 });

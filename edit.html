@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block body %}
+<link rel='stylesheet' href='/planner-assets/mobile-quick-upload.css?v=20260618-mobile-upload1'>
 
 {% embed 'view-edit.html' %}
   {% block createnew %}
@@ -51,6 +52,26 @@
 
   {# TAGS #}
   {% include('edit-tags.html') %}
+
+  <section class='mobile-quick-upload mt-3 mb-3' data-mobile-quick-upload data-upload-endpoint='/api/v2/{{ Entity.entityType.value }}/{{ Entity.id }}/uploads'>
+    <div class='d-flex flex-wrap align-items-center justify-content-between'>
+      <div class='mb-2 mr-2'>
+        <h3 class='h5 mb-1'><i class='fas fa-paperclip fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '快速上传' : 'Quick upload' }}</h3>
+        <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? '手机端可直接拍照或选择文件，上传后会出现在下方附件区。' : 'On mobile, capture a photo or choose a file. Uploaded files appear in the attachments section below.' }}</div>
+      </div>
+      <div class='mobile-quick-upload-actions btn-group flex-wrap' role='group' aria-label='{{ App.getLang() starts with 'zh' ? '快速上传' : 'Quick upload' }}'>
+        <button type='button' class='btn btn-primary' data-mobile-upload-trigger='image'>
+          <i class='fas fa-camera fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '拍照/图片' : 'Photo/Image' }}
+        </button>
+        <button type='button' class='btn btn-secondary' data-mobile-upload-trigger='file'>
+          <i class='fas fa-file-upload fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '文件' : 'File' }}
+        </button>
+      </div>
+    </div>
+    <input type='file' class='d-none' data-mobile-upload-input='image' accept='image/*' capture='environment' multiple aria-label='{{ App.getLang() starts with 'zh' ? '拍照或上传图片' : 'Capture or upload images' }}' />
+    <input type='file' class='d-none' data-mobile-upload-input='file' multiple aria-label='{{ App.getLang() starts with 'zh' ? '上传文件' : 'Upload files' }}' />
+    <div class='small mt-2' data-mobile-upload-status aria-live='polite'></div>
+  </section>
 
   {% if Entity.entityType.value == 'experiments' %}
     {% include 'experiment-diagram.html' %}
@@ -200,4 +221,5 @@
     data-id='{{ Entity.id }}'
 >
 </div>
+<script defer src='/planner-assets/mobile-quick-upload.js?v=20260618-mobile-upload1'></script>
 {% endblock body %}
