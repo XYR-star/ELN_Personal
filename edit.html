@@ -73,8 +73,11 @@
     <div class='small mt-2' data-mobile-upload-status aria-live='polite'></div>
   </section>
 
+  {% set driveLinksScriptName = App.Request.getScriptName|split('/')|last %}
+  {% if driveLinksScriptName in ['experiments.php', 'database.php'] %}
   {% if Entity.entityType.value == 'experiments' %}
     {% include 'experiment-diagram.html' %}
+  {% endif %}
     {% include 'drive-links.html' %}
   {% endif %}
 

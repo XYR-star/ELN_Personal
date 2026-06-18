@@ -128,3 +128,44 @@ test('visual storage assignment appears in the native resource storage panel', a
     if (itemId) await page.request.delete(`/api/v2/items/${itemId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).catch(() => {});
   }
 });
+
+test('resource edit page saves lightweight Google Drive links', async ({ page }) => {
+  const suffix = `${Date.now()}`.slice(-7);
+  const resourceTitle = `E2E resource drive links ${suffix}`;
+  let itemId;
+
+  await openAuthed(page, '/storage-map.php');
+
+  try {
+    const categories = await storageApi(page, 'categories');
+    expect(categories.length).toBeGreaterThan(0);
+    const item = await storageApi(page, 'items', {
+      method: 'POST',
+      body: JSON.stringify({ title: resourceTitle, category_id: categories[0].id })
+    });
+    itemId = item.id;
+
+    await openAuthed(page, `/database.php?mode=edit&id=${itemId}`);
+
+    const panel = page.locator('[data-drive-links-root]');
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText(/Drive files|Drive 文件/);
+
+    await page.locator('[data-drive-link-add]').dispatchEvent('click');
+    await page.locator('[data-drive-link-title]').fill('Antibody manual');
+    await page.locator('[data-drive-link-url]').fill('https://docs.google.com/document/d/manual123/edit');
+    await page.locator('[data-drive-link-note]').fill('vendor protocol and dilution notes');
+    await page.locator('[data-drive-link-save]').dispatchEvent('click');
+
+    await expect(panel.locator('[data-drive-link-card]')).toContainText('Antibody manual');
+    await expect(panel.locator('[data-drive-link-card]')).toContainText('docs.google.com');
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('[data-drive-link-card]')).toContainText('Antibody manual');
+
+    await page.locator('[data-drive-link-delete]').dispatchEvent('click');
+    await expect(page.locator('[data-drive-link-card]')).toHaveCount(0);
+  } finally {
+    if (itemId) await page.request.delete(`/api/v2/items/${itemId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).catch(() => {});
+  }
+});

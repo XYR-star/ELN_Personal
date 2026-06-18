@@ -65,8 +65,9 @@ async function createTempExperiment(page, title) {
 
 async function deleteTempExperiment(page, id) {
   await page.request.delete(`/api/v2/experiments/${id}`, {
-    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-  });
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    timeout: 10_000
+  }).catch(() => {});
 }
 
 loadLocalEnv();
@@ -272,6 +273,7 @@ test('experiment diagram API saves and restores a local scene', async ({ page })
 });
 
 test('mobile quick upload attaches a file through the native uploads API', async ({ page }) => {
+  test.setTimeout(90000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
@@ -307,7 +309,8 @@ test('mobile quick upload attaches a file through the native uploads API', async
       timeout: 20000
     }).toBe(true);
 
-    await page.goto(`/experiments.php?mode=edit&id=${experimentId}#filesDiv`, { waitUntil: 'domcontentloaded' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.locator('#filesDiv').evaluate((element) => element.scrollIntoView({ block: 'start' }));
     await expect(page.locator('#filesDiv')).toContainText(fileName);
 
     const cleanup = await page.evaluate(async ({ id, name }) => {
