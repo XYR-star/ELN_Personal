@@ -3,19 +3,22 @@
 }
 
 .experiment-diagram-preview {
+  height: min(420px, 46vw);
   min-height: 160px;
   max-height: 420px;
   border: 1px solid #d5dde3;
   border-radius: 4px;
   background: #fff;
-  overflow: auto;
+  overflow: hidden;
   padding: 12px;
 }
 
 .experiment-diagram-preview svg {
   display: block;
+  width: 100%;
+  height: 100%;
   max-width: 100%;
-  height: auto;
+  max-height: 100%;
 }
 
 .experiment-diagram-empty {
@@ -75,6 +78,7 @@
 
 @media (max-width: 768px) {
   .experiment-diagram-preview {
+    height: 260px;
     max-height: 260px;
   }
 

@@ -147,7 +147,7 @@ test('experiment diagram preview stays compact for tall diagrams', async ({ page
             appState: { viewBackgroundColor: '#ffffff' },
             files: {}
           },
-          preview_svg: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900"><rect width="1200" height="900" fill="white"/><text x="40" y="80">tall diagram</text></svg>'
+          preview_svg: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="white"/><text x="40" y="80">tall diagram</text><circle cx="1100" cy="820" r="40" fill="none" stroke="black"/></svg>'
         })
       });
       if (!response.ok) throw new Error(`Failed to seed compact preview: ${response.status}`);
@@ -155,8 +155,22 @@ test('experiment diagram preview stays compact for tall diagrams', async ({ page
 
     await page.reload({ waitUntil: 'networkidle' });
 
-    const previewBox = await page.locator('[data-experiment-diagram-preview]').boundingBox();
-    expect(previewBox?.height).toBeLessThanOrEqual(430);
+    const previewMetrics = await page.locator('[data-experiment-diagram-preview]').evaluate((element) => {
+      const svg = element.querySelector('svg');
+      const containerBox = element.getBoundingClientRect();
+      const svgBox = svg?.getBoundingClientRect();
+      return {
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        containerHeight: containerBox.height,
+        svgHeight: svgBox?.height || 0,
+        svgWidth: svgBox?.width || 0
+      };
+    });
+    expect(previewMetrics.containerHeight).toBeLessThanOrEqual(430);
+    expect(previewMetrics.scrollHeight).toBeLessThanOrEqual(previewMetrics.clientHeight + 1);
+    expect(previewMetrics.svgHeight).toBeLessThanOrEqual(previewMetrics.clientHeight);
+    expect(previewMetrics.svgWidth).toBeGreaterThan(0);
   } finally {
     await deleteTempExperiment(page, experimentId);
   }
