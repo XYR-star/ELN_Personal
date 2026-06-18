@@ -24,6 +24,7 @@ The repository stores code only. Runtime data, uploaded files, database contents
 ├── personal-mode.html           # Tools page documenting hidden/kept entries
 ├── planner.html                 # Planner page shell
 ├── storage-map.html             # Visual storage map shell
+├── storage-view-edit.html       # Resource storage panel override
 ├── experiment-diagram.html      # Diagram panel shell
 ├── *-api.php                    # eLabFTW-side PHP API endpoints
 ├── public/                      # Browser assets and built diagram bundle
@@ -59,9 +60,9 @@ The planner adds a personal experiment planning calendar inside the eLabFTW UI. 
 
 ### Storage Map
 
-The storage map visualizes freezer layouts, drawers, boxes, and individual slots. Slots can be linked to native eLabFTW resources, so the visual freezer map and the resource database stay connected.
+The storage map visualizes freezer layouts, drawers, boxes, and individual slots. Slots can be linked to native eLabFTW resources, so the visual freezer map and the resource database stay connected. Visual assignments are also mirrored into eLabFTW's native `STORAGE` panel as storage units and item containers.
 
-入口在 `Resources -> Inventory / Storage map`。样本实体仍然使用 eLabFTW 原生 Resources，冰箱孔位只是把 Resource 链接到具体位置。
+入口在 `Resources -> Inventory / Storage map`。样本实体仍然使用 eLabFTW 原生 Resources，冰箱孔位会把 Resource 链接到具体位置，并同步显示在 Resource 自带的 `STORAGE` 区块中。
 
 ### Experiment Diagram
 
@@ -105,6 +106,8 @@ Current important override:
 
 ```text
 /www/elabftw-data/overrides/head.html
+/www/elabftw-data/overrides/storage-map.html
+/www/elabftw-data/overrides/storage-view-edit.html
 ```
 
 After changing template overrides, refresh runtime cache:

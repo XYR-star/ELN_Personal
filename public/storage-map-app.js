@@ -7,6 +7,8 @@ const apiBase = root?.dataset.apiBase || '/storage-map-api.php';
 
 const state = {
   locations: [],
+  initialItemId: Number(root?.dataset.initialItemId || 0),
+  initialItem: null,
   selectedLocationId: null,
   view: null,
   selectedSlot: null
@@ -144,6 +146,12 @@ async function loadLocations() {
   if (state.selectedLocationId) await selectLocation(state.selectedLocationId);
 }
 
+async function loadInitialItem() {
+  if (!state.initialItemId) return;
+  const items = await api(`items?item_id=${state.initialItemId}`);
+  state.initialItem = items[0] || null;
+}
+
 async function selectLocation(locationId) {
   state.selectedLocationId = Number(locationId);
   state.selectedSlot = null;
@@ -234,22 +242,23 @@ function openAssignmentDialog(slot) {
   const dialog = $('#storage-assignment-dialog');
   const form = $('#storage-assignment-form');
   form.reset();
+  const selectedItem = slot.assignment ? {
+    id: slot.assignment.item_id,
+    title: slot.assignment.item_title
+  } : state.initialItem;
   form.location_id.value = state.selectedLocationId;
   form.slot_code.value = slot.code;
   const field = itemField();
-  if (field) field.value = slot.assignment?.item_id || '';
+  if (field) field.value = selectedItem?.id || '';
   form.qty_stored.value = slot.assignment?.qty_stored || '1';
   form.qty_unit.value = slot.assignment?.qty_unit || 'tube';
   form.note.value = slot.assignment?.note || '';
   $('#storage-assignment-title').textContent = `填入孔位 ${slot.code}`;
-  $('#storage-item-search').value = slot.assignment?.item_title || '';
+  $('#storage-item-search').value = selectedItem?.title || '';
   showAssignmentError('');
   const results = $('#storage-item-results');
   if (results) results.innerHTML = '';
-  updateItemSelection(slot.assignment ? {
-    id: slot.assignment.item_id,
-    title: slot.assignment.item_title
-  } : null);
+  updateItemSelection(selectedItem || null);
   dialog.showModal();
   $('#storage-item-search').focus();
 }
@@ -415,7 +424,17 @@ function bindControls() {
   });
   $('#storage-item-search').addEventListener('input', (event) => searchItems(event.target.value));
   $('#storage-assignment-dialog').addEventListener('toggle', (event) => {
-    if (event.target.open) searchItems('');
+    if (!event.target.open) return;
+    const selectedItem = state.selectedSlot?.assignment ? {
+      id: state.selectedSlot.assignment.item_id,
+      title: state.selectedSlot.assignment.item_title
+    } : state.initialItem;
+    if (selectedItem) {
+      renderItemResults([selectedItem], selectedItem.title);
+      updateItemSelection(selectedItem);
+      return;
+    }
+    searchItems('');
   });
   $('#storage-assignment-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -440,7 +459,12 @@ function bindControls() {
 }
 
 bindControls();
-loadLocations().catch((error) => {
+async function init() {
+  await loadInitialItem();
+  await loadLocations();
+}
+
+init().catch((error) => {
   $('#storage-grid').textContent = error.message;
   console.error(error);
 });

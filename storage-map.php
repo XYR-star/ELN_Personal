@@ -18,6 +18,7 @@ try {
         'pageTitle' => '可视化存放',
         'hideTitle' => true,
         'storageMapLang' => $App->getLang(),
+        'initialItemId' => (int) $Request->query->get('item_id', 0),
     )));
     $Response->headers->set('Cache-Control', 'no-store, max-age=0');
     $Response->headers->set('Pragma', 'no-cache');

@@ -43,12 +43,14 @@ function storageEnsureSchema(Db $Db): void
         columns_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
         position_code VARCHAR(16) NULL,
         notes TEXT NULL,
+        native_storage_unit_id INT UNSIGNED NULL,
         created_by INT UNSIGNED NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         KEY idx_ricky_storage_locations_team (team),
         KEY idx_ricky_storage_locations_parent (parent_id),
+        KEY idx_ricky_storage_locations_native (native_storage_unit_id),
         CONSTRAINT fk_ricky_storage_locations_team FOREIGN KEY (team) REFERENCES teams(id) ON DELETE CASCADE,
         CONSTRAINT fk_ricky_storage_locations_parent FOREIGN KEY (parent_id) REFERENCES ricky_storage_locations(id) ON DELETE RESTRICT,
         CONSTRAINT fk_ricky_storage_locations_user FOREIGN KEY (created_by) REFERENCES users(userid) ON DELETE CASCADE
@@ -63,6 +65,8 @@ function storageEnsureSchema(Db $Db): void
         qty_stored DECIMAL(10,2) UNSIGNED NOT NULL DEFAULT 1.00,
         qty_unit VARCHAR(32) NOT NULL DEFAULT "tube",
         note TEXT NULL,
+        native_storage_unit_id INT UNSIGNED NULL,
+        native_container_id INT UNSIGNED NULL,
         created_by INT UNSIGNED NOT NULL,
         modified_by INT UNSIGNED NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -71,6 +75,8 @@ function storageEnsureSchema(Db $Db): void
         UNIQUE KEY uniq_ricky_storage_slot (location_id, slot_code),
         KEY idx_ricky_storage_assignments_team (team),
         KEY idx_ricky_storage_assignments_item (item_id),
+        KEY idx_ricky_storage_assignments_native_unit (native_storage_unit_id),
+        KEY idx_ricky_storage_assignments_native_container (native_container_id),
         CONSTRAINT fk_ricky_storage_assignments_team FOREIGN KEY (team) REFERENCES teams(id) ON DELETE CASCADE,
         CONSTRAINT fk_ricky_storage_assignments_location FOREIGN KEY (location_id) REFERENCES ricky_storage_locations(id) ON DELETE RESTRICT,
         CONSTRAINT fk_ricky_storage_assignments_item FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
@@ -103,6 +109,24 @@ function storageEnsureSchema(Db $Db): void
         CONSTRAINT fk_ricky_storage_movements_to_location FOREIGN KEY (to_location_id) REFERENCES ricky_storage_locations(id) ON DELETE SET NULL,
         CONSTRAINT fk_ricky_storage_movements_user FOREIGN KEY (created_by) REFERENCES users(userid) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci');
+
+    storageEnsureColumn($Db, 'ricky_storage_locations', 'native_storage_unit_id', 'INT UNSIGNED NULL');
+    storageEnsureColumn($Db, 'ricky_storage_assignments', 'native_storage_unit_id', 'INT UNSIGNED NULL');
+    storageEnsureColumn($Db, 'ricky_storage_assignments', 'native_container_id', 'INT UNSIGNED NULL');
+}
+
+function storageEnsureColumn(Db $Db, string $table, string $column, string $definition): void
+{
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) || !preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+        throw new Exception('Invalid schema identifier');
+    }
+    $req = $Db->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name AND COLUMN_NAME = :column_name');
+    $req->bindValue(':table_name', $table);
+    $req->bindValue(':column_name', $column);
+    $Db->execute($req);
+    if ((int) $req->fetchColumn() === 0) {
+        $Db->q(sprintf('ALTER TABLE `%s` ADD COLUMN `%s` %s', $table, $column, $definition));
+    }
 }
 
 function storageInt(mixed $value): ?int
@@ -124,7 +148,7 @@ function storageSlotCode(mixed $value): string
 
 function storageLocation(Db $Db, int $team, int $id): array
 {
-    $req = $Db->prepare('SELECT id, team, parent_id, name, kind, layout_type, rows_count AS row_count, columns_count AS column_count, position_code, notes, created_at, modified_at FROM ricky_storage_locations WHERE id = :id AND team = :team');
+    $req = $Db->prepare('SELECT id, team, parent_id, name, kind, layout_type, rows_count AS row_count, columns_count AS column_count, position_code, notes, native_storage_unit_id, created_at, modified_at FROM ricky_storage_locations WHERE id = :id AND team = :team');
     $req->bindValue(':id', $id, PDO::PARAM_INT);
     $req->bindValue(':team', $team, PDO::PARAM_INT);
     $Db->execute($req);
@@ -133,6 +157,163 @@ function storageLocation(Db $Db, int $team, int $id): array
         throw new Exception('Location not found');
     }
     return $row;
+}
+
+function storageNativeUnitExists(Db $Db, ?int $id): bool
+{
+    if (!$id) {
+        return false;
+    }
+    $req = $Db->prepare('SELECT id FROM storage_units WHERE id = :id');
+    $req->bindValue(':id', $id, PDO::PARAM_INT);
+    $Db->execute($req);
+    return (bool) $req->fetch();
+}
+
+function storageCreateNativeUnit(Db $Db, string $name, ?int $parentId = null): int
+{
+    $req = $Db->prepare('INSERT INTO storage_units(parent_id, name) VALUES(:parent_id, :name)');
+    $req->bindValue(':parent_id', $parentId, $parentId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+    $req->bindValue(':name', mb_substr($name, 0, 255));
+    $Db->execute($req);
+    return (int) $Db->lastInsertId();
+}
+
+function storageNativeUnitForLocation(Db $Db, int $team, int $locationId): int
+{
+    $location = storageLocation($Db, $team, $locationId);
+    $nativeId = storageInt($location['native_storage_unit_id'] ?? null);
+    $parentNativeId = null;
+    if ($location['parent_id'] !== null) {
+        $parentNativeId = storageNativeUnitForLocation($Db, $team, (int) $location['parent_id']);
+    }
+
+    if ($nativeId && storageNativeUnitExists($Db, $nativeId)) {
+        $req = $Db->prepare('UPDATE storage_units SET parent_id = :parent_id, name = :name WHERE id = :id');
+        $req->bindValue(':parent_id', $parentNativeId, $parentNativeId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $req->bindValue(':name', mb_substr((string) $location['name'], 0, 255));
+        $req->bindValue(':id', $nativeId, PDO::PARAM_INT);
+        $Db->execute($req);
+        return $nativeId;
+    }
+
+    $nativeId = storageCreateNativeUnit($Db, (string) $location['name'], $parentNativeId);
+    $req = $Db->prepare('UPDATE ricky_storage_locations SET native_storage_unit_id = :native_storage_unit_id WHERE id = :id AND team = :team');
+    $req->bindValue(':native_storage_unit_id', $nativeId, PDO::PARAM_INT);
+    $req->bindValue(':id', $locationId, PDO::PARAM_INT);
+    $req->bindValue(':team', $team, PDO::PARAM_INT);
+    $Db->execute($req);
+    return $nativeId;
+}
+
+function storageNativeUnitForSlot(Db $Db, int $team, array $location, string $slot, ?int $existingNativeId = null): int
+{
+    $parentNativeId = storageNativeUnitForLocation($Db, $team, (int) $location['id']);
+    if ($existingNativeId && storageNativeUnitExists($Db, $existingNativeId)) {
+        $req = $Db->prepare('UPDATE storage_units SET parent_id = :parent_id, name = :name WHERE id = :id');
+        $req->bindValue(':parent_id', $parentNativeId, PDO::PARAM_INT);
+        $req->bindValue(':name', $slot);
+        $req->bindValue(':id', $existingNativeId, PDO::PARAM_INT);
+        $Db->execute($req);
+        return $existingNativeId;
+    }
+
+    $lookup = $Db->prepare('SELECT id FROM storage_units WHERE parent_id = :parent_id AND name = :name ORDER BY id ASC LIMIT 1');
+    $lookup->bindValue(':parent_id', $parentNativeId, PDO::PARAM_INT);
+    $lookup->bindValue(':name', $slot);
+    $Db->execute($lookup);
+    $found = $lookup->fetch();
+    if ($found) {
+        return (int) $found['id'];
+    }
+
+    return storageCreateNativeUnit($Db, $slot, $parentNativeId);
+}
+
+function storageNativeContainerExists(Db $Db, ?int $id): bool
+{
+    if (!$id) {
+        return false;
+    }
+    $req = $Db->prepare('SELECT id FROM containers2items WHERE id = :id');
+    $req->bindValue(':id', $id, PDO::PARAM_INT);
+    $Db->execute($req);
+    return (bool) $req->fetch();
+}
+
+function storageDeleteNativeContainer(Db $Db, ?int $containerId, ?int $itemId = null, ?int $storageUnitId = null): void
+{
+    if ($containerId) {
+        $req = $Db->prepare('DELETE FROM containers2items WHERE id = :id');
+        $req->bindValue(':id', $containerId, PDO::PARAM_INT);
+        $Db->execute($req);
+        return;
+    }
+    if ($itemId && $storageUnitId) {
+        $req = $Db->prepare('DELETE FROM containers2items WHERE item_id = :item_id AND storage_id = :storage_id');
+        $req->bindValue(':item_id', $itemId, PDO::PARAM_INT);
+        $req->bindValue(':storage_id', $storageUnitId, PDO::PARAM_INT);
+        $Db->execute($req);
+    }
+}
+
+function storageDeleteNativeUnitIfUnused(Db $Db, ?int $nativeStorageUnitId): void
+{
+    if (!$nativeStorageUnitId) {
+        return;
+    }
+    $req = $Db->prepare('SELECT
+        (SELECT COUNT(*) FROM storage_units WHERE parent_id = :id) +
+        (SELECT COUNT(*) FROM containers2items WHERE storage_id = :id) +
+        (SELECT COUNT(*) FROM containers2experiments WHERE storage_id = :id) +
+        (SELECT COUNT(*) FROM containers2items_types WHERE storage_id = :id) +
+        (SELECT COUNT(*) FROM containers2experiments_templates WHERE storage_id = :id) AS refs');
+    $req->bindValue(':id', $nativeStorageUnitId, PDO::PARAM_INT);
+    $Db->execute($req);
+    if ((int) $req->fetchColumn() === 0) {
+        $delete = $Db->prepare('DELETE FROM storage_units WHERE id = :id');
+        $delete->bindValue(':id', $nativeStorageUnitId, PDO::PARAM_INT);
+        $Db->execute($delete);
+    }
+}
+
+function storageSyncNativeAssignment(Db $Db, int $team, array $location, string $slot, int $itemId, float $qty, string $unit, ?array $existing = null): array
+{
+    $nativeStorageUnitId = storageNativeUnitForSlot($Db, $team, $location, $slot, storageInt($existing['native_storage_unit_id'] ?? null));
+    $nativeContainerId = storageInt($existing['native_container_id'] ?? null);
+
+    if ($nativeContainerId && storageNativeContainerExists($Db, $nativeContainerId)) {
+        $req = $Db->prepare('UPDATE containers2items SET item_id = :item_id, storage_id = :storage_id, qty_stored = :qty_stored, qty_unit = :qty_unit WHERE id = :id');
+        $req->bindValue(':id', $nativeContainerId, PDO::PARAM_INT);
+    } else {
+        $lookup = $Db->prepare('SELECT id FROM containers2items WHERE item_id = :item_id AND storage_id = :storage_id ORDER BY id ASC LIMIT 1');
+        $lookup->bindValue(':item_id', $itemId, PDO::PARAM_INT);
+        $lookup->bindValue(':storage_id', $nativeStorageUnitId, PDO::PARAM_INT);
+        $Db->execute($lookup);
+        $found = $lookup->fetch();
+        if ($found) {
+            $nativeContainerId = (int) $found['id'];
+            $req = $Db->prepare('UPDATE containers2items SET item_id = :item_id, storage_id = :storage_id, qty_stored = :qty_stored, qty_unit = :qty_unit WHERE id = :id');
+            $req->bindValue(':id', $nativeContainerId, PDO::PARAM_INT);
+        } else {
+            $req = $Db->prepare('INSERT INTO containers2items(item_id, storage_id, qty_stored, qty_unit) VALUES(:item_id, :storage_id, :qty_stored, :qty_unit)');
+        }
+    }
+
+    $req->bindValue(':item_id', $itemId, PDO::PARAM_INT);
+    $req->bindValue(':storage_id', $nativeStorageUnitId, PDO::PARAM_INT);
+    $req->bindValue(':qty_stored', $qty);
+    $req->bindValue(':qty_unit', mb_substr($unit, 0, 10));
+    $Db->execute($req);
+
+    if (!$nativeContainerId) {
+        $nativeContainerId = (int) $Db->lastInsertId();
+    }
+
+    return array(
+        'native_storage_unit_id' => $nativeStorageUnitId,
+        'native_container_id' => $nativeContainerId,
+    );
 }
 
 function storageValidateSlot(array $location, string $slot): void
@@ -216,6 +397,7 @@ function storageMovement(Db $Db, int $team, int $userId, array $data): void
 
 try {
     $Response->prepare($Request);
+    storageEnsureSchema($Db);
 
     $team = (int) $App->Users->team;
     $userId = (int) $App->Users->userid;
@@ -224,7 +406,7 @@ try {
     $parts = $path === '' ? array() : explode('/', $path);
 
     if ($method === 'GET' && $parts === array('locations')) {
-        $req = $Db->prepare('SELECT id, parent_id, name, kind, layout_type, rows_count AS row_count, columns_count AS column_count, position_code, notes, created_at, modified_at FROM ricky_storage_locations WHERE team = :team ORDER BY created_at ASC, id ASC');
+        $req = $Db->prepare('SELECT id, parent_id, name, kind, layout_type, rows_count AS row_count, columns_count AS column_count, position_code, notes, native_storage_unit_id, created_at, modified_at FROM ricky_storage_locations WHERE team = :team ORDER BY created_at ASC, id ASC');
         $req->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($req);
         storageJson($Response, $req->fetchAll());
@@ -262,10 +444,14 @@ try {
         $req->bindValue(':position_code', ($body['position_code'] ?? '') !== '' ? strtoupper(trim((string) $body['position_code'])) : null);
         $req->bindValue(':notes', $body['notes'] ?? null);
         $Db->execute($req);
+        $updated = storageLocation($Db, $team, $id);
+        if (storageInt($updated['native_storage_unit_id'] ?? null)) {
+            storageNativeUnitForLocation($Db, $team, $id);
+        }
         storageJson($Response, storageLocation($Db, $team, $id));
     } elseif ($method === 'DELETE' && count($parts) === 2 && $parts[0] === 'locations') {
         $id = (int) $parts[1];
-        storageLocation($Db, $team, $id);
+        $location = storageLocation($Db, $team, $id);
         $check = $Db->prepare('SELECT (SELECT COUNT(*) FROM ricky_storage_locations WHERE parent_id = :id) AS children, (SELECT COUNT(*) FROM ricky_storage_assignments WHERE location_id = :id) AS assignments');
         $check->bindValue(':id', $id, PDO::PARAM_INT);
         $Db->execute($check);
@@ -277,10 +463,11 @@ try {
         $req->bindValue(':id', $id, PDO::PARAM_INT);
         $req->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($req);
+        storageDeleteNativeUnitIfUnused($Db, storageInt($location['native_storage_unit_id'] ?? null));
         storageJson($Response, null, 204);
     } elseif ($method === 'GET' && count($parts) === 3 && $parts[0] === 'locations' && $parts[2] === 'view') {
         $location = storageLocation($Db, $team, (int) $parts[1]);
-        $childrenReq = $Db->prepare('SELECT id, parent_id, name, kind, layout_type, rows_count AS row_count, columns_count AS column_count, position_code, notes FROM ricky_storage_locations WHERE parent_id = :id AND team = :team ORDER BY position_code ASC, id ASC');
+        $childrenReq = $Db->prepare('SELECT id, parent_id, name, kind, layout_type, rows_count AS row_count, columns_count AS column_count, position_code, notes, native_storage_unit_id FROM ricky_storage_locations WHERE parent_id = :id AND team = :team ORDER BY position_code ASC, id ASC');
         $childrenReq->bindValue(':id', $location['id'], PDO::PARAM_INT);
         $childrenReq->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($childrenReq);
@@ -290,9 +477,11 @@ try {
         $Db->execute($assignReq);
         storageJson($Response, array('location' => $location, 'children' => $childrenReq->fetchAll(), 'assignments' => $assignReq->fetchAll()));
     } elseif ($method === 'GET' && $parts === array('items')) {
+        $itemId = (int) $Request->query->get('item_id', 0);
         $q = '%' . trim((string) $Request->query->get('q', '')) . '%';
-        $req = $Db->prepare('SELECT id, title, date FROM items WHERE team = :team AND state = 1 AND title LIKE :q ORDER BY modified_at DESC LIMIT 30');
+        $req = $Db->prepare('SELECT id, title, date FROM items WHERE team = :team AND state = 1 AND (:item_id = 0 OR id = :item_id) AND title LIKE :q ORDER BY modified_at DESC LIMIT 30');
         $req->bindValue(':team', $team, PDO::PARAM_INT);
+        $req->bindValue(':item_id', $itemId, PDO::PARAM_INT);
         $req->bindValue(':q', $q);
         $Db->execute($req);
         storageJson($Response, $req->fetchAll());
@@ -314,6 +503,7 @@ try {
         $existingReq->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($existingReq);
         $existing = $existingReq->fetch() ?: null;
+        $sync = storageSyncNativeAssignment($Db, $team, $location, $slot, $itemId, $qty, trim((string) ($body['qty_unit'] ?? 'tube')), $existing);
 
         $req = $Db->prepare('INSERT INTO ricky_storage_assignments(team, location_id, slot_code, item_id, qty_stored, qty_unit, note, created_by, modified_by)
             VALUES(:team, :location_id, :slot_code, :item_id, :qty_stored, :qty_unit, :note, :created_by, :modified_by)
@@ -328,6 +518,14 @@ try {
         $req->bindValue(':created_by', $userId, PDO::PARAM_INT);
         $req->bindValue(':modified_by', $userId, PDO::PARAM_INT);
         $Db->execute($req);
+
+        $nativeReq = $Db->prepare('UPDATE ricky_storage_assignments SET native_storage_unit_id = :native_storage_unit_id, native_container_id = :native_container_id WHERE location_id = :location_id AND slot_code = :slot_code AND team = :team');
+        $nativeReq->bindValue(':native_storage_unit_id', $sync['native_storage_unit_id'], PDO::PARAM_INT);
+        $nativeReq->bindValue(':native_container_id', $sync['native_container_id'], PDO::PARAM_INT);
+        $nativeReq->bindValue(':location_id', $location['id'], PDO::PARAM_INT);
+        $nativeReq->bindValue(':slot_code', $slot);
+        $nativeReq->bindValue(':team', $team, PDO::PARAM_INT);
+        $Db->execute($nativeReq);
 
         $freshReq = $Db->prepare('SELECT a.*, i.title AS item_title FROM ricky_storage_assignments a JOIN items i ON i.id = a.item_id WHERE a.location_id = :location_id AND a.slot_code = :slot_code AND a.team = :team');
         $freshReq->bindValue(':location_id', $location['id'], PDO::PARAM_INT);
@@ -358,6 +556,8 @@ try {
         if (!$assignment) {
             throw new Exception('Assignment not found');
         }
+        $nativeStorageUnitId = storageInt($assignment['native_storage_unit_id'] ?? null);
+        storageDeleteNativeContainer($Db, storageInt($assignment['native_container_id'] ?? null), (int) $assignment['item_id'], $nativeStorageUnitId);
         storageMovement($Db, $team, $userId, array(
             'assignment_id' => $assignment['id'],
             'item_id' => $assignment['item_id'],
@@ -371,6 +571,7 @@ try {
         $delete->bindValue(':id', $id, PDO::PARAM_INT);
         $delete->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($delete);
+        storageDeleteNativeUnitIfUnused($Db, $nativeStorageUnitId);
         storageJson($Response, null, 204);
     } elseif ($method === 'GET' && $parts === array('movements')) {
         $itemId = (int) $Request->query->get('item_id', 0);
