@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>实验规划日历 - eLabFTW</title>
+    <link rel="stylesheet" media="all" href="/assets/vendor.min.css?v=e12477f9" />
+    <link rel="stylesheet" media="all" href="/assets/elabftw.min.css?v=e12477f9" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="container" class="container-fluid planner-shell" data-planner-root data-api-base="api">
+      <nav aria-label="Main menu" class="navbar navbar-expand-lg navbar-dark planner-navbar">
+        <a href="/dashboard.php" class="logo-header planner-logo" title="eLabFTW" aria-label="eLabFTW">
+          <img src="/assets/images/logo-header.svg" alt="eLabFTW" width="110" height="40" />
+        </a>
+        <div class="navbar-nav planner-nav-links">
+          <a aria-label="Dashboard" class="nav-item nav-link" href="/dashboard.php" title="Dashboard">
+            <i class="fas fa-house"></i>
+          </a>
+          <a class="nav-item nav-link" href="/experiments.php?scope=1" data-i18n="nav.experiments">实验</a>
+          <a class="nav-item nav-link" href="/database.php?scope=1" data-i18n="nav.database">资源</a>
+          <a class="nav-item nav-link" href="/scheduler.php" data-i18n="nav.scheduler">调度表</a>
+          <a class="nav-item nav-link active" href="/planner/" data-planner-link data-i18n="nav.planner" aria-current="page">规划日历</a>
+          <a class="nav-item nav-link" href="/team.php" data-i18n="nav.team">团队</a>
+        </div>
+      </nav>
+
+      <main class="real-container planner-page">
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow" data-i18n="app.eyebrow">实验规划</p>
+          <h1 data-i18n="app.title">实验规划日历</h1>
+        </div>
+        <div class="planner-actions">
+          <button id="today-button" class="planner-btn secondary" type="button" data-i18n="action.today">今天</button>
+          <button id="prev-button" class="planner-btn secondary" type="button" data-i18n="action.previous">上一页</button>
+          <button id="next-button" class="planner-btn secondary" type="button" data-i18n="action.next">下一页</button>
+          <button id="new-plan-button" class="planner-btn primary" type="button" data-i18n="action.newPlan">新建计划</button>
+        </div>
+      </section>
+
+      <section class="planner-toolbar">
+        <div class="segmented" aria-label="视图模式" data-i18n-attr="aria-label:view.label">
+          <button class="active" type="button" data-view="month" data-i18n="view.month">月</button>
+          <button type="button" data-view="week" data-i18n="view.week">周</button>
+          <button type="button" data-view="day" data-i18n="view.day">今日</button>
+        </div>
+        <label><span data-i18n="filter.type">类型</span>
+          <select id="type-filter">
+            <option value="" data-i18n="filter.all">全部</option>
+          </select>
+        </label>
+        <label><span data-i18n="filter.status">状态</span>
+          <select id="status-filter">
+            <option value="" data-i18n="filter.all">全部</option>
+          </select>
+        </label>
+        <input id="search-input" placeholder="搜索标题、备注、链接" data-i18n-attr="placeholder:filter.searchPlaceholder" />
+      </section>
+
+      <section class="planner-layout">
+        <article class="planner-calendar-panel">
+          <div class="calendar-title" id="calendar-title"></div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </article>
+        <aside class="planner-side-panel">
+          <h2 data-i18n="side.selectedDate">选中日期</h2>
+          <p id="selected-date" class="muted"></p>
+          <div id="selected-list" class="plan-list"></div>
+        </aside>
+      </section>
+      </main>
+    </div>
+
+    <dialog id="plan-dialog" class="planner-modal">
+      <form id="plan-form" class="planner-modal-card">
+        <div class="planner-modal-header">
+          <h2 id="dialog-title">新建计划</h2>
+          <button id="dialog-close" class="planner-icon-button" type="button" aria-label="关闭" data-i18n-attr="aria-label:dialog.close">×</button>
+        </div>
+        <input name="id" type="hidden" />
+        <div class="planner-form-grid">
+          <label><span data-i18n="field.title">标题</span><input name="title" required placeholder="例如：Day 1 mRNA 转染" data-i18n-attr="placeholder:field.titlePlaceholder" /></label>
+          <label><span data-i18n="field.type">类型</span><select name="type" id="type-select"></select></label>
+          <label><span data-i18n="field.start">开始时间</span><input name="start" type="datetime-local" required /></label>
+          <label><span data-i18n="field.end">结束时间</span><input name="end" type="datetime-local" /></label>
+          <label><span data-i18n="field.status">状态</span><select name="status" id="status-select"></select></label>
+          <label><span data-i18n="field.experimentUrl">关联实验 URL</span><input name="experimentUrl" placeholder="/experiments.php?mode=edit&id=1" /></label>
+          <label><span data-i18n="field.itemUrl">关联资源 URL</span><input name="itemUrl" placeholder="/database.php?mode=edit&id=1" /></label>
+        </div>
+        <label><span data-i18n="field.note">备注</span><textarea name="note" rows="4" placeholder="步骤、提醒、条件、注意事项" data-i18n-attr="placeholder:field.notePlaceholder"></textarea></label>
+        <div class="planner-modal-actions">
+          <button class="planner-btn primary" type="submit" data-i18n="action.save">保存</button>
+          <button class="planner-btn secondary" id="mark-done-button" type="button" data-i18n="action.markDone">标记完成</button>
+          <button class="planner-btn secondary" id="delay-button" type="button" data-i18n="action.delay">推迟</button>
+          <button class="planner-btn danger" id="delete-button" type="button" data-i18n="action.delete">删除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

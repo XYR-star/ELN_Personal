@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block body %}
+<link rel='stylesheet' href='/planner-assets/storage-map.css?v=20260617-health1'>
+
+<div class='storage-map-page' data-storage-map-root data-api-base='/storage-map-api.php'>
+  <div class='d-flex align-items-center justify-content-between mb-3'>
+    <div>
+      <h1 class='mb-1'>可视化存放</h1>
+      <p class='text-muted mb-0'>冰箱、抽屉、盒子和 eLabFTW Resources 的孔位关联。</p>
+    </div>
+    <div class='btn-group'>
+      <button class='btn btn-primary' id='storage-new-freezer' type='button'><i class='fas fa-plus fa-fw'></i> 新建冰箱</button>
+      <button class='btn btn-secondary' type='button' data-action='toggle-create-modal' data-type='items'><i class='fas fa-cubes-stacked fa-fw'></i> 新建 Resource</button>
+    </div>
+  </div>
+
+  <section class='storage-native-layout'>
+    <aside class='storage-native-panel'>
+      <div class='d-flex align-items-center justify-content-between mb-2'>
+        <h2 class='h5 mb-0'>位置分布</h2>
+        <span id='storage-location-count' class='text-muted small'>0</span>
+      </div>
+      <div id='storage-location-tree' class='storage-location-tree'></div>
+    </aside>
+
+    <main class='storage-native-panel storage-map-panel'>
+      <div class='d-flex align-items-start justify-content-between mb-3'>
+        <div>
+          <h2 id='storage-selected-name' class='h4 mb-1'>选择一个位置</h2>
+          <p id='storage-selected-meta' class='text-muted mb-0'>冰箱、抽屉和盒子会在这里展开。</p>
+        </div>
+        <div class='btn-group btn-group-sm'>
+          <button class='btn btn-secondary' id='storage-edit-location' type='button' hidden>编辑</button>
+          <button class='btn btn-danger' id='storage-delete-location' type='button' hidden>删除</button>
+        </div>
+      </div>
+      <div id='storage-grid' class='storage-grid-empty'>选择左侧位置开始。</div>
+    </main>
+
+    <aside class='storage-native-panel'>
+      <h2 class='h5'>孔位详情</h2>
+      <div id='storage-slot-detail' class='storage-slot-detail text-muted'>点击孔位查看样本和历史。</div>
+    </aside>
+  </section>
+</div>
+
+<dialog id='storage-location-dialog' class='storage-dialog'>
+  <form id='storage-location-form' class='storage-dialog-card'>
+    <div class='d-flex align-items-center justify-content-between mb-3'>
+      <h2 id='storage-location-dialog-title' class='h4 mb-0'>位置</h2>
+      <button class='btn btn-sm btn-secondary' data-dialog-close type='button'>×</button>
+    </div>
+    <input name='id' type='hidden'>
+    <input name='parent_id' type='hidden'>
+    <input name='position_code' type='hidden'>
+    <div class='form-group'>
+      <label>名称<input class='form-control' name='name' required></label>
+    </div>
+    <div class='form-row'>
+      <label class='col'>类型
+        <select class='form-control' name='kind'>
+          <option value='freezer'>冰箱</option>
+          <option value='drawer'>抽屉</option>
+          <option value='box'>盒子</option>
+          <option value='location'>普通位置</option>
+        </select>
+      </label>
+      <label class='col'>布局
+        <select class='form-control' name='layout_type'>
+          <option value='grid'>网格</option>
+          <option value='none'>无</option>
+        </select>
+      </label>
+    </div>
+    <div class='form-row'>
+      <label class='col'>行<input class='form-control' name='rows' type='number' min='0' max='26'></label>
+      <label class='col'>列<input class='form-control' name='columns' type='number' min='0' max='48'></label>
+    </div>
+    <div class='form-group'>
+      <label>备注<textarea class='form-control' name='notes' rows='3'></textarea></label>
+    </div>
+    <div class='text-right'>
+      <button class='btn btn-primary' type='submit'>保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id='storage-assignment-dialog' class='storage-dialog'>
+  <form id='storage-assignment-form' class='storage-dialog-card'>
+    <div class='d-flex align-items-center justify-content-between mb-3'>
+      <h2 id='storage-assignment-title' class='h4 mb-0'>填入孔位</h2>
+      <button class='btn btn-sm btn-secondary' data-dialog-close type='button'>×</button>
+    </div>
+    <input name='location_id' type='hidden'>
+    <input name='slot_code' type='hidden'>
+    <div class='form-group'>
+      <label>搜索 Resource<input class='form-control' id='storage-item-search' autocomplete='off' placeholder='HEK293T, plasmid, antibody'></label>
+      <input name='item_id' id='storage-item-id' type='hidden' required>
+      <div id='storage-item-results' class='storage-item-results' role='listbox' aria-label='Resource 搜索结果'></div>
+      <p id='storage-item-selection' class='storage-item-selection text-muted mb-0'>搜索并选择一个 Resource。</p>
+      <p id='storage-assignment-error' class='storage-assignment-error text-danger mb-0' hidden></p>
+    </div>
+    <div class='form-row'>
+      <label class='col'>数量<input class='form-control' name='qty_stored' type='number' step='0.01' value='1'></label>
+      <label class='col'>单位<input class='form-control' name='qty_unit' value='tube'></label>
+    </div>
+    <div class='form-group'>
+      <label>备注<input class='form-control' name='note'></label>
+    </div>
+    <div class='text-right'>
+      <button class='btn btn-primary' type='submit'>保存到孔位</button>
+    </div>
+  </form>
+</dialog>
+
+<script type='module' src='/planner-assets/storage-map-app.js?v=20260617-health1'></script>
+{% endblock %}

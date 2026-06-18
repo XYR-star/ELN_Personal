@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='container mt-4 mb-5'>
+  <div class='row justify-content-center'>
+    <div class='col-xl-9 col-lg-10'>
+      <div class='d-flex align-items-start justify-content-between mb-4'>
+        <div>
+          <p class='text-muted mb-1'>{{ App.getLang() starts with 'zh' ? '个人版工作台' : 'Personal workspace' }}</p>
+          <h1 class='mb-2'>{{ App.getLang() starts with 'zh' ? '当前隐藏的功能' : 'Hidden features' }}</h1>
+          <p class='lead mb-0'>
+            {{ App.getLang() starts with 'zh'
+              ? '这些功能只是从导航入口中隐藏，没有删除 eLabFTW 的核心代码、数据表或权限配置。需要时可以恢复。'
+              : 'These features are hidden from navigation only. No eLabFTW core code, database tables, or permissions were removed, so this setup can be reverted.' }}
+          </p>
+        </div>
+        <span class='badge badge-info mt-2'>{{ App.getLang() starts with 'zh' ? '可回滚' : 'Reversible' }}</span>
+      </div>
+
+      <div class='card mb-3'>
+        <div class='card-header font-weight-bold'>
+          {{ App.getLang() starts with 'zh' ? '顶部导航隐藏' : 'Hidden from top navigation' }}
+        </div>
+        <ul class='list-group list-group-flush'>
+          <li class='list-group-item d-flex align-items-center'>
+            <i class='fas fa-calendar-check fa-fw mr-2 text-muted'></i>
+            <div>
+              <strong>Scheduler</strong>
+              <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? '原生预约/仪器资源日历入口已隐藏；实验规划使用“规划日历”。' : 'The native booking/resource scheduler link is hidden. Planning uses Planner instead.' }}</div>
+            </div>
+          </li>
+          <li class='list-group-item d-flex align-items-center'>
+            <i class='fas fa-users fa-fw mr-2 text-muted'></i>
+            <div>
+              <strong>Team</strong>
+              <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? '团队页入口已隐藏，个人使用时减少干扰。' : 'The team page link is hidden to reduce noise for personal use.' }}</div>
+            </div>
+          </li>
+          <li class='list-group-item d-flex align-items-center'>
+            <i class='fas fa-users fa-fw mr-2 text-muted'></i>
+            <div>
+              <strong>{{ App.getLang() starts with 'zh' ? 'Team / All 实验列表' : 'Team / All experiment lists' }}</strong>
+              <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? 'Experiments 下的 Team experiments 和 All experiments 已隐藏；个人记录默认使用 My experiments。' : 'Team experiments and All experiments are hidden from the Experiments menu. Personal records use My experiments by default.' }}</div>
+            </div>
+          </li>
+          <li class='list-group-item d-flex align-items-center'>
+            <i class='fas fa-globe fa-fw mr-2 text-muted'></i>
+            <div>
+              <strong>{{ App.getLang() starts with 'zh' ? 'Team / All 资源列表' : 'Team / All resource lists' }}</strong>
+              <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? 'Resources 下的 Team resources 和 All resources 已隐藏；库存与样本入口使用 My resources 和 Inventory / 可视化存放。' : 'Team resources and All resources are hidden from the Resources menu. Inventory work uses My resources and Inventory / Storage map.' }}</div>
+            </div>
+          </li>
+          <li class='list-group-item d-flex align-items-center'>
+            <i class='far fa-bell fa-fw mr-2 text-muted'></i>
+            <div>
+              <strong>{{ App.getLang() starts with 'zh' ? '通知铃铛' : 'Notification bell' }}</strong>
+              <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? '右上角通知下拉入口已隐藏。' : 'The top-right notification dropdown is hidden.' }}</div>
+            </div>
+          </li>
+          <li class='list-group-item d-flex align-items-center'>
+            <i class='fas fa-circle-question fa-fw mr-2 text-muted'></i>
+            <div>
+              <strong>{{ App.getLang() starts with 'zh' ? '帮助/社区菜单' : 'Help/community menu' }}</strong>
+              <div class='text-muted small'>{{ App.getLang() starts with 'zh' ? '文档、社区、反馈等外部链接入口已隐藏。' : 'External documentation, community, and feedback links are hidden.' }}</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class='card mb-3'>
+        <div class='card-header font-weight-bold'>
+          {{ App.getLang() starts with 'zh' ? '仍然保留' : 'Still visible' }}
+        </div>
+        <div class='card-body'>
+          <p class='mb-2'>{{ App.getLang() starts with 'zh' ? '以下入口继续保留，方便个人实验记录闭环：' : 'The following entries remain visible for the personal ELN workflow:' }}</p>
+          <div class='d-flex flex-wrap'>
+            <span class='badge badge-light border mr-2 mb-2'>Dashboard</span>
+            <span class='badge badge-light border mr-2 mb-2'>Experiments</span>
+            <span class='badge badge-light border mr-2 mb-2'>Resources</span>
+            <span class='badge badge-light border mr-2 mb-2'>Inventory / Storage map</span>
+            <span class='badge badge-light border mr-2 mb-2'>Planner</span>
+            <span class='badge badge-light border mr-2 mb-2'>Tools</span>
+            <span class='badge badge-light border mr-2 mb-2'>Create experiment</span>
+            <span class='badge badge-light border mr-2 mb-2'>Create resource</span>
+            <span class='badge badge-light border mr-2 mb-2'>Import / Export</span>
+            <span class='badge badge-light border mr-2 mb-2'>Admin / Sysadmin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class='alert alert-secondary'>
+        <i class='fas fa-rotate-left fa-fw mr-1'></i>
+        {{ App.getLang() starts with 'zh'
+          ? '恢复方式：还原 head.html 模板覆写，或从该模板里把隐藏的导航块加回即可。'
+          : 'Rollback: restore the overridden head.html template, or add the hidden navigation blocks back into that template.' }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

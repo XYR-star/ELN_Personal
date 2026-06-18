@@ -1,0 +1,19 @@
+[Unit]
+Description=eLabFTW planning calendar
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/elabftw-planner
+Environment=NODE_ENV=production
+Environment=HOST=0.0.0.0
+Environment=PORT=4044
+Environment=PLANNER_DATA_DIR=/www/elabftw-data/planner
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+StandardOutput=append:/www/elabftw-data/logs/planner.log
+StandardError=append:/www/elabftw-data/logs/planner.err.log
+
+[Install]
+WantedBy=multi-user.target

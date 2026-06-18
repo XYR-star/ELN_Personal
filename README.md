@@ -1,0 +1,135 @@
+# ELN Personal
+
+Personal eLabFTW customizations for `eln.heyrickishere.com`.
+
+这是 Rick 个人版 eLabFTW 的轻量定制层。目标不是 fork eLabFTW 核心，而是在原系统之上补齐个人实验管理需要的几个入口：规划日历、可视化冰箱/库存、实验流程画板，以及更清爽的个人导航。
+
+This repository keeps the lightweight add-ons and template overrides used on top of a self-hosted eLabFTW instance:
+
+- Personal-mode navigation cleanup for a single-user ELN workflow.
+- Experiment planner embedded into eLabFTW.
+- Visual freezer/storage map linked to eLabFTW resources.
+- Experiment diagram panel for drawing workflow sketches above the main text.
+- Smoke tests for the key browser flows.
+
+The repository stores code only. Runtime data, uploaded files, database contents, login sessions, generated reports, and server secrets stay on the server and are not committed.
+
+本仓库只同步代码和静态资源，不同步实验数据、数据库、上传附件、登录态、测试报告和服务器密钥。
+
+## Project Layout
+
+```text
+.
+├── head.html                    # eLabFTW navigation template override
+├── personal-mode.html           # Tools page documenting hidden/kept entries
+├── planner.html                 # Planner page shell
+├── storage-map.html             # Visual storage map shell
+├── experiment-diagram.html      # Diagram panel shell
+├── *-api.php                    # eLabFTW-side PHP API endpoints
+├── public/                      # Browser assets and built diagram bundle
+├── src/                         # JS source modules
+├── tests/                       # Unit and Playwright smoke tests
+├── package.json
+└── storage-map-schema.sql       # Storage map database tables
+```
+
+## Main Features
+
+## 功能概览
+
+### Personal Navigation
+
+The overridden `head.html` keeps eLabFTW familiar while hiding noisy multi-user entries:
+
+- Hidden: Team page, notification bell, help/community links.
+- Hidden: Team/All experiment lists.
+- Hidden: Team/All resource lists.
+- Kept: Dashboard, Experiments, Resources, Planner, Tools, Admin/Sysadmin.
+- Resources includes `Inventory / Storage map` as the visual inventory entry.
+
+The `personal-mode.html` page records what was hidden so the customization is reversible.
+
+`Tools -> Personal mode` 会记录当前隐藏了哪些入口，方便之后回滚或调整。
+
+### Planner
+
+The planner adds a personal experiment planning calendar inside the eLabFTW UI. It supports month/week/day views, plan status, links to experiments/resources, quick completion, deletion, and retroactive completion notes.
+
+规划日历用于安排实验事项，不等同于 eLabFTW 原生的仪器预约 Scheduler。
+
+### Storage Map
+
+The storage map visualizes freezer layouts, drawers, boxes, and individual slots. Slots can be linked to native eLabFTW resources, so the visual freezer map and the resource database stay connected.
+
+入口在 `Resources -> Inventory / Storage map`。样本实体仍然使用 eLabFTW 原生 Resources，冰箱孔位只是把 Resource 链接到具体位置。
+
+### Experiment Diagram
+
+The diagram panel provides a local drawing board for experiment schematics. It is intended for workflow sketches and visual notes near the experiment editor without relying on cloud sync.
+
+实验画板是本地嵌入的示意图工具，用于在实验正文上方画流程图或操作示意，不依赖 Excalidraw 云同步。
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run unit tests:
+
+```bash
+npm test
+```
+
+Run browser smoke tests against the deployed eLabFTW instance:
+
+```bash
+cp .env.e2e.example .env.e2e
+# fill ELAB_EMAIL and ELAB_PASSWORD locally
+npm run smoke:e2e
+```
+
+Build the experiment diagram bundle after changing React sources:
+
+```bash
+npm run build:diagram
+```
+
+## Deployment Notes
+
+The live eLabFTW instance uses Docker and template overrides under the eLabFTW data directory. A typical deployment copies the maintained overrides and add-on pages into the mounted override/web locations, then clears template cache or restarts the web container.
+
+Current important override:
+
+```text
+/www/elabftw-data/overrides/head.html
+```
+
+After changing template overrides, refresh runtime cache:
+
+```bash
+docker exec elabftw sh -lc 'rm -rf /elabftw/cache/twig/* /elabftw/cache/templates/* 2>/dev/null || true'
+docker compose -f /root/elabftw/docker-compose.yml restart web
+```
+
+Keep secrets and runtime state out of git:
+
+- `.env`
+- `.env.e2e`
+- `htpasswd-*`
+- `playwright/.auth/`
+- `playwright-report/`
+- `test-results/`
+- `node_modules/`
+
+## Reversibility
+
+These customizations are intentionally shallow:
+
+- eLabFTW core files are not edited directly.
+- Hidden navigation items are hidden by template override, not deleted from eLabFTW.
+- Runtime data remains in the eLabFTW database and data volume.
+
+To roll back the personal navigation cleanup, restore the previous `head.html` override or remove the override file from the eLabFTW data directory.

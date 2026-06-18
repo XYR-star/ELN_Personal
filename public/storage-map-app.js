@@ -1,0 +1,446 @@
+import { buildStorageView, defaultChildLocationForSlot, prepareStorageItemResults } from './storage-map-core.js?v=20260616-ui1';
+
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+const root = $('[data-storage-map-root]');
+const apiBase = root?.dataset.apiBase || '/storage-map-api.php';
+
+const state = {
+  locations: [],
+  selectedLocationId: null,
+  view: null,
+  selectedSlot: null
+};
+
+function api(path, options = {}) {
+  const [cleanPath, query = ''] = String(path).split('?');
+  const suffix = query ? `&${query}` : '';
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  const headers = {
+    'X-Requested-With': 'XMLHttpRequest',
+    ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+    ...(options.body ? { 'Content-Type': 'application/json' } : {})
+  };
+  return fetch(`${apiBase}?path=${encodeURIComponent(cleanPath)}${suffix}`, {
+    headers,
+    ...options
+  }).then(async (response) => {
+    if (response.status === 204) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Request failed: ${response.status}`);
+    return data;
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function formData(form) {
+  return Object.fromEntries(new FormData(form));
+}
+
+function itemField() {
+  return $('#storage-item-id') || $('#storage-item-select');
+}
+
+function ensureItemPicker() {
+  if ($('#storage-item-results')) return;
+  const legacySelect = $('#storage-item-select');
+  if (!legacySelect) return;
+
+  const hidden = document.createElement('input');
+  hidden.name = 'item_id';
+  hidden.id = 'storage-item-id';
+  hidden.type = 'hidden';
+  hidden.required = true;
+
+  const results = document.createElement('div');
+  results.id = 'storage-item-results';
+  results.className = 'storage-item-results';
+  results.setAttribute('role', 'listbox');
+  results.setAttribute('aria-label', 'Resource 搜索结果');
+
+  const selection = document.createElement('p');
+  selection.id = 'storage-item-selection';
+  selection.className = 'storage-item-selection text-muted mb-0';
+  selection.textContent = '搜索并选择一个 Resource。';
+
+  const error = document.createElement('p');
+  error.id = 'storage-assignment-error';
+  error.className = 'storage-assignment-error text-danger mb-0';
+  error.hidden = true;
+
+  legacySelect.replaceWith(hidden, results, selection, error);
+}
+
+function showAssignmentError(message = '') {
+  const error = $('#storage-assignment-error');
+  if (!error) {
+    if (message) alert(message);
+    return;
+  }
+  error.textContent = message;
+  error.hidden = !message;
+}
+
+function locationDepth(location, byId) {
+  let depth = 0;
+  let current = location;
+  const seen = new Set();
+  while (current?.parent_id && !seen.has(current.id)) {
+    seen.add(current.id);
+    current = byId.get(Number(current.parent_id));
+    depth += 1;
+  }
+  return depth;
+}
+
+function iconFor(location) {
+  if (location.kind === 'freezer') return '▦';
+  if (location.kind === 'drawer') return '▤';
+  if (location.kind === 'box') return '▧';
+  return '□';
+}
+
+function renderTree() {
+  const byId = new Map(state.locations.map((location) => [Number(location.id), location]));
+  const sorted = [...state.locations].sort((a, b) => {
+    const depth = locationDepth(a, byId) - locationDepth(b, byId);
+    return depth || String(a.position_code || '').localeCompare(String(b.position_code || '')) || Number(a.id) - Number(b.id);
+  });
+  $('#storage-location-count').textContent = `${state.locations.length}`;
+  $('#storage-location-tree').innerHTML = sorted.length ? sorted.map((location) => {
+    const active = Number(location.id) === Number(state.selectedLocationId) ? ' active' : '';
+    return `
+      <button class="storage-tree-node${active}" data-location-id="${location.id}" style="--depth:${locationDepth(location, byId)}" type="button">
+        <span>${iconFor(location)}</span>
+        <strong>${escapeHtml(location.name)}</strong>
+        <small>${escapeHtml(location.kind)}${location.position_code ? ` · ${escapeHtml(location.position_code)}` : ''}${location.layout_type === 'grid' ? ` · ${location.row_count}x${location.column_count}` : ''}</small>
+      </button>
+    `;
+  }).join('') : '<p class="text-muted">还没有位置，先新建一个冰箱。</p>';
+  $$('.storage-tree-node').forEach((button) => button.addEventListener('click', () => selectLocation(Number(button.dataset.locationId))));
+}
+
+function updateLocationActions() {
+  const hasSelection = Boolean(state.selectedLocationId);
+  $('#storage-edit-location').hidden = !hasSelection;
+  $('#storage-delete-location').hidden = !hasSelection;
+}
+
+async function loadLocations() {
+  state.locations = await api('locations');
+  if (!state.selectedLocationId && state.locations.length) {
+    state.selectedLocationId = Number(state.locations[0].id);
+  }
+  renderTree();
+  updateLocationActions();
+  if (state.selectedLocationId) await selectLocation(state.selectedLocationId);
+}
+
+async function selectLocation(locationId) {
+  state.selectedLocationId = Number(locationId);
+  state.selectedSlot = null;
+  renderTree();
+  updateLocationActions();
+  const location = state.locations.find((item) => Number(item.id) === Number(locationId));
+  if (!location) return;
+  $('#storage-selected-name').textContent = location.name;
+  $('#storage-selected-meta').textContent = `${location.kind}${location.layout_type === 'grid' ? ` · ${location.row_count} x ${location.column_count}` : ''}`;
+  $('#storage-slot-detail').innerHTML = '<p class="text-muted">点击孔位查看样本和历史。</p>';
+
+  if (location.layout_type !== 'grid') {
+    const children = state.locations.filter((item) => Number(item.parent_id) === Number(location.id));
+    $('#storage-grid').className = 'storage-grid-empty';
+    $('#storage-grid').innerHTML = children.length
+      ? children.map((child) => `<button class="storage-child-location" data-location-id="${child.id}" type="button"><strong>${escapeHtml(child.name)}</strong><span>${escapeHtml(child.kind)}</span></button>`).join('')
+      : '这个位置下还没有子位置。';
+    $$('.storage-child-location').forEach((button) => button.addEventListener('click', () => selectLocation(Number(button.dataset.locationId))));
+    return;
+  }
+
+  const data = await api(`locations/${location.id}/view`);
+  state.view = buildStorageView(data);
+  renderGrid(state.view);
+}
+
+function renderGrid(view) {
+  if (view.location.kind === 'drawer') {
+    renderDrawer(view);
+    return;
+  }
+  const grid = $('#storage-grid');
+  grid.className = 'storage-box-grid';
+  grid.style.setProperty('--columns', view.columns);
+  grid.innerHTML = view.slots.map((slot) => `
+    <button class="storage-slot-cell ${slot.state}" data-slot-code="${slot.code}" type="button">
+      <span class="storage-slot-code">${slot.code}</span>
+      <strong>${slot.child ? escapeHtml(slot.child.name) : slot.assignment ? escapeHtml(slot.assignment.item_title) : ''}</strong>
+      <small>${slot.child ? escapeHtml(slot.child.kind) : slot.assignment ? `${slot.assignment.qty_stored} ${escapeHtml(slot.assignment.qty_unit)}` : '空'}</small>
+    </button>
+  `).join('');
+  $$('.storage-slot-cell').forEach((button) => button.addEventListener('click', () => showSlot(view.slots.find((slot) => slot.code === button.dataset.slotCode))));
+}
+
+function renderDrawer(view) {
+  const grid = $('#storage-grid');
+  grid.className = 'storage-drawer-depth';
+  grid.innerHTML = Array.from({ length: view.rows }, (_, index) => {
+    const row = index + 1;
+    const rowSlots = view.slots.filter((slot) => slot.row === row);
+    return `
+      <section class="storage-drawer-row">
+        <div class="storage-drawer-label">${rowSlots[0]?.rowLabel || row}</div>
+        <div class="storage-drawer-track" style="--columns:${view.columns}">
+          ${rowSlots.map((slot) => `
+            <button class="storage-drawer-spine ${slot.state}" data-slot-code="${slot.code}" type="button">
+              <span class="storage-slot-code">${slot.code}</span>
+              <strong>${slot.child ? escapeHtml(slot.child.name) : ''}</strong>
+              <small>${slot.child ? escapeHtml(slot.child.kind) : '空'}</small>
+            </button>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  }).join('');
+  $$('.storage-drawer-spine').forEach((button) => button.addEventListener('click', () => showSlot(view.slots.find((slot) => slot.code === button.dataset.slotCode))));
+}
+
+function openLocationDialog(location = null, defaults = {}) {
+  const dialog = $('#storage-location-dialog');
+  const form = $('#storage-location-form');
+  form.reset();
+  const data = location || defaults;
+  form.id.value = data.id || '';
+  form.parent_id.value = data.parent_id || '';
+  form.position_code.value = data.position_code || '';
+  form.name.value = data.name || '';
+  form.kind.value = data.kind || 'freezer';
+  form.layout_type.value = data.layout_type || 'grid';
+  form.rows.value = data.rows ?? data.row_count ?? (form.kind.value === 'box' ? 9 : 4);
+  form.columns.value = data.columns ?? data.column_count ?? (form.kind.value === 'box' ? 9 : 6);
+  form.notes.value = data.notes || '';
+  dialog.showModal();
+  form.name.focus();
+}
+
+function openAssignmentDialog(slot) {
+  const dialog = $('#storage-assignment-dialog');
+  const form = $('#storage-assignment-form');
+  form.reset();
+  form.location_id.value = state.selectedLocationId;
+  form.slot_code.value = slot.code;
+  const field = itemField();
+  if (field) field.value = slot.assignment?.item_id || '';
+  form.qty_stored.value = slot.assignment?.qty_stored || '1';
+  form.qty_unit.value = slot.assignment?.qty_unit || 'tube';
+  form.note.value = slot.assignment?.note || '';
+  $('#storage-assignment-title').textContent = `填入孔位 ${slot.code}`;
+  $('#storage-item-search').value = slot.assignment?.item_title || '';
+  showAssignmentError('');
+  const results = $('#storage-item-results');
+  if (results) results.innerHTML = '';
+  updateItemSelection(slot.assignment ? {
+    id: slot.assignment.item_id,
+    title: slot.assignment.item_title
+  } : null);
+  dialog.showModal();
+  $('#storage-item-search').focus();
+}
+
+async function showSlot(slot) {
+  state.selectedSlot = slot;
+  const location = state.locations.find((item) => Number(item.id) === Number(state.selectedLocationId));
+  if (slot.child) {
+    $('#storage-slot-detail').innerHTML = `
+      <span class="storage-slot-badge">${slot.code}</span>
+      <h3 class="h5 mt-2">${escapeHtml(slot.child.name)}</h3>
+      <p>${escapeHtml(slot.child.kind)} · 子位置</p>
+      <button id="storage-open-child" class="btn btn-secondary btn-sm" type="button">打开这个位置</button>
+    `;
+    $('#storage-open-child').addEventListener('click', () => selectLocation(Number(slot.child.id)));
+    return;
+  }
+  const childDefault = defaultChildLocationForSlot(location, slot.code);
+  if (!slot.assignment && childDefault) {
+    $('#storage-slot-detail').innerHTML = `
+      <span class="storage-slot-badge">${slot.code}</span>
+      <h3 class="h5 mt-2">空位置</h3>
+      <p>在这里创建 ${childDefault.kind === 'drawer' ? '抽屉' : '盒子'}。</p>
+      <button id="storage-create-child" class="btn btn-primary btn-sm" type="button">创建并进入</button>
+    `;
+    $('#storage-create-child').addEventListener('click', async () => {
+      const created = await api('locations', {
+        method: 'POST',
+        body: JSON.stringify({ ...childDefault, parent_id: state.selectedLocationId })
+      });
+      await loadLocations();
+      await selectLocation(Number(created.id));
+    });
+    return;
+  }
+  if (!slot.assignment) {
+    $('#storage-slot-detail').innerHTML = `
+      <span class="storage-slot-badge">${slot.code}</span>
+      <h3 class="h5 mt-2">空孔位</h3>
+      <p>把一个 eLabFTW Resource 链接到当前盒子的 ${slot.code}。</p>
+      <button id="storage-assign-slot" class="btn btn-primary btn-sm" type="button">填入 Resource</button>
+    `;
+    $('#storage-assign-slot').addEventListener('click', () => openAssignmentDialog(slot));
+    return;
+  }
+  const movements = await api(`movements?item_id=${slot.assignment.item_id}`);
+  $('#storage-slot-detail').innerHTML = `
+    <span class="storage-slot-badge">${slot.code}</span>
+    <h3 class="h5 mt-2">${escapeHtml(slot.assignment.item_title)}</h3>
+    <p>${slot.assignment.qty_stored} ${escapeHtml(slot.assignment.qty_unit)} · <a href="/database.php?mode=view&id=${slot.assignment.item_id}">打开 Resource</a></p>
+    ${slot.assignment.note ? `<p>${escapeHtml(slot.assignment.note)}</p>` : ''}
+    <div class="btn-group btn-group-sm mb-3">
+      <button id="storage-edit-assignment" class="btn btn-secondary" type="button">修改</button>
+      <button id="storage-remove-assignment" class="btn btn-danger" type="button">取用/删除</button>
+    </div>
+    <div class="storage-movement-list">
+      ${movements.map((movement) => `
+        <article>
+          <strong>${escapeHtml(movement.action)}</strong>
+          <p class="mb-1 text-muted">${escapeHtml(movement.created_at)} · ${escapeHtml(movement.user_name || '')}</p>
+          <p class="mb-0">${escapeHtml(movement.from_location_name || '')}${movement.from_slot_code ? ` / ${movement.from_slot_code}` : ''} → ${escapeHtml(movement.to_location_name || '')}${movement.to_slot_code ? ` / ${movement.to_slot_code}` : ''}</p>
+        </article>
+      `).join('') || '<p class="text-muted">暂无历史</p>'}
+    </div>
+  `;
+  $('#storage-edit-assignment').addEventListener('click', () => openAssignmentDialog(slot));
+  $('#storage-remove-assignment').addEventListener('click', async () => {
+    if (!confirm('从这个孔位取用/删除记录？Resource 本身不会被删除。')) return;
+    await api(`assignments/${slot.assignment.id}`, { method: 'DELETE' });
+    await selectLocation(state.selectedLocationId);
+  });
+}
+
+async function searchItems(query = '') {
+  const items = await api(`items?q=${encodeURIComponent(query)}`);
+  renderItemResults(items, query);
+}
+
+function updateItemSelection(item = null) {
+  const field = itemField();
+  const selectedId = item?.id || field?.value || '';
+  if (field) field.value = selectedId;
+  const selection = $('#storage-item-selection');
+  if (selection) {
+    selection.textContent = item
+      ? `已选择：${item.title} · #${item.id}`
+      : '搜索并选择一个 Resource。';
+  }
+  $$('.storage-item-result').forEach((button) => {
+    button.classList.toggle('active', Number(button.dataset.itemId) === Number(selectedId));
+  });
+}
+
+function renderItemResults(items = [], query = '') {
+  const field = itemField();
+  const results = prepareStorageItemResults(items, field?.value || '');
+  const resultList = $('#storage-item-results');
+  if (!resultList) {
+    const legacySelect = $('#storage-item-select');
+    if (!legacySelect) return;
+    legacySelect.innerHTML = results.map((item) => `<option value="${item.id}"${item.selected ? ' selected' : ''}>${escapeHtml(item.title)} · #${item.id}</option>`).join('');
+    return;
+  }
+  const trimmedQuery = query.trim();
+  resultList.innerHTML = results.length ? results.map((item) => `
+    <button class="storage-item-result${item.selected ? ' active' : ''}" data-item-id="${item.id}" data-item-title="${escapeHtml(item.title)}" type="button" role="option" aria-selected="${item.selected ? 'true' : 'false'}">
+      <strong>${escapeHtml(item.title)}</strong>
+      <span>#${item.id}</span>
+    </button>
+  `).join('') : `
+    <div class="storage-item-empty">
+      ${trimmedQuery ? `没有找到“${escapeHtml(trimmedQuery)}”。` : '暂无可选 Resource。'}
+      ${trimmedQuery ? `<button class="btn btn-primary btn-sm mt-2" id="storage-create-item-from-query" type="button">新建 Resource：${escapeHtml(trimmedQuery)}</button>` : '<span>可以先输入样品名搜索或新建。</span>'}
+    </div>
+  `;
+  $$('.storage-item-result').forEach((button) => button.addEventListener('click', () => {
+    updateItemSelection({
+      id: button.dataset.itemId,
+      title: button.dataset.itemTitle
+    });
+  }));
+  $('#storage-create-item-from-query')?.addEventListener('click', async () => {
+    const item = await api('items', {
+      method: 'POST',
+      body: JSON.stringify({ title: trimmedQuery })
+    });
+    $('#storage-item-search').value = item.title;
+    renderItemResults([item], item.title);
+    updateItemSelection(item);
+  });
+}
+
+function bindControls() {
+  ensureItemPicker();
+  $('#storage-new-freezer').addEventListener('click', () => openLocationDialog(null, {
+    name: '-80 冰箱',
+    kind: 'freezer',
+    layout_type: 'grid',
+    rows: 4,
+    columns: 6
+  }));
+  $('#storage-edit-location').addEventListener('click', () => {
+    const location = state.locations.find((item) => Number(item.id) === Number(state.selectedLocationId));
+    if (location) openLocationDialog(location);
+  });
+  $('#storage-delete-location').addEventListener('click', async () => {
+    if (!state.selectedLocationId || !confirm('删除选中位置？需要先清空子位置和孔位记录。')) return;
+    await api(`locations/${state.selectedLocationId}`, { method: 'DELETE' });
+    state.selectedLocationId = null;
+    updateLocationActions();
+    await loadLocations();
+  });
+  $$('[data-dialog-close]').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
+  $('#storage-location-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = formData(event.currentTarget);
+    const id = data.id;
+    const path = id ? `locations/${id}` : 'locations';
+    await api(path, { method: id ? 'PATCH' : 'POST', body: JSON.stringify(data) });
+    $('#storage-location-dialog').close();
+    await loadLocations();
+    if (id) await selectLocation(Number(id));
+  });
+  $('#storage-item-search').addEventListener('input', (event) => searchItems(event.target.value));
+  $('#storage-assignment-dialog').addEventListener('toggle', (event) => {
+    if (event.target.open) searchItems('');
+  });
+  $('#storage-assignment-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = formData(event.currentTarget);
+    if (!data.item_id) {
+      showAssignmentError('请先从搜索结果里选择一个 Resource。');
+      return;
+    }
+    const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    showAssignmentError('');
+    try {
+      await api('assignments', { method: 'POST', body: JSON.stringify(data) });
+      $('#storage-assignment-dialog').close();
+      await selectLocation(state.selectedLocationId);
+    } catch (error) {
+      showAssignmentError(error.message || '保存失败');
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+}
+
+bindControls();
+loadLocations().catch((error) => {
+  $('#storage-grid').textContent = error.message;
+  console.error(error);
+});

@@ -1,0 +1,87 @@
+.experiment-diagram-panel {
+  max-width: 100%;
+}
+
+.experiment-diagram-preview {
+  min-height: 160px;
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+  background: #fff;
+  overflow: auto;
+  padding: 12px;
+}
+
+.experiment-diagram-preview svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.experiment-diagram-empty {
+  min-height: 136px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #c8d4dd;
+}
+
+.experiment-diagram-dialog {
+  width: min(1500px, calc(100vw - 48px));
+  height: min(900px, calc(100vh - 48px));
+  border: 0;
+  border-radius: 4px;
+  padding: 0;
+}
+
+.experiment-diagram-dialog::backdrop {
+  background: rgba(0, 0, 0, .45);
+}
+
+.experiment-diagram-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  background: #f4f4f4;
+}
+
+.experiment-diagram-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.experiment-diagram-canvas {
+  flex: 1;
+  min-height: 420px;
+  margin-top: 12px;
+  border: 1px solid #d5dde3;
+  background: #fff;
+}
+
+.experiment-diagram-react {
+  height: 100%;
+}
+
+.experiment-diagram-react .excalidraw {
+  --color-primary: #2bb3bb;
+  --color-primary-darker: #269da4;
+  --color-primary-darkest: #1f8389;
+  --color-primary-light: #d6f2f4;
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  .experiment-diagram-dialog {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
+  .experiment-diagram-dialog-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
