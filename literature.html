@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='container mt-4 mb-5' data-literature-root>
+  <div class='d-flex align-items-start justify-content-between mb-4'>
+    <div>
+      <p class='text-muted mb-1 text-uppercase font-weight-bold'>{{ App.getLang() starts with 'zh' ? '研究输入' : 'Research input' }}</p>
+      <h1 class='mb-2'>{{ App.getLang() starts with 'zh' ? '文献调研' : 'Literature' }}</h1>
+      <p class='lead mb-0'>
+        {{ App.getLang() starts with 'zh'
+          ? '这里会作为论文、资料、关键结论和待读清单的入口。'
+          : 'A future workspace for papers, references, key findings, and reading queues.' }}
+      </p>
+    </div>
+  </div>
+
+  <div class='row'>
+    <div class='col-lg-8'>
+      <div class='card' data-empty-state>
+        <div class='card-body text-center py-5'>
+          <i class='fas fa-book-open fa-3x text-muted mb-3'></i>
+          <h2 class='h4 mb-2'>{{ App.getLang() starts with 'zh' ? '暂未放置内容' : 'No literature layout yet' }}</h2>
+          <p class='text-muted mb-0'>
+            {{ App.getLang() starts with 'zh'
+              ? '先保留这个主界面，后续可以决定按项目、主题、论文状态或实验关联来组织。'
+              : 'This shell is ready. The content model can later be organized by project, topic, paper status, or experiment links.' }}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class='col-lg-4 mt-3 mt-lg-0'>
+      <div class='card'>
+        <div class='card-header font-weight-bold'>
+          {{ App.getLang() starts with 'zh' ? '预留区域' : 'Reserved areas' }}
+        </div>
+        <div class='list-group list-group-flush'>
+          <div class='list-group-item text-muted'><i class='fas fa-folder-tree fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '项目 / 主题' : 'Projects / topics' }}</div>
+          <div class='list-group-item text-muted'><i class='fas fa-file-lines fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '论文卡片' : 'Paper cards' }}</div>
+          <div class='list-group-item text-muted'><i class='fab fa-google-drive fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'Drive / DOI / PDF 链接' : 'Drive / DOI / PDF links' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -117,3 +117,24 @@ test('Personal navigation hides team/all scopes and labels storage as inventory'
 
   expect(errors).toEqual([]);
 });
+
+test('Literature and ideas shells render from the main navigation', async ({ page }) => {
+  const errors = await collectPageErrors(page);
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+
+  await expect(page.locator('a.nav-link[href="literature.php"]')).toBeVisible();
+  await expect(page.locator('a.nav-link[href="ideas.php"]')).toBeVisible();
+
+  await page.goto('/literature.php', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('[data-literature-root]')).toBeVisible();
+  await expect(page.locator('[data-literature-root] h1')).toContainText(/Literature|文献调研/);
+  await expect(page.locator('[data-empty-state]')).toBeVisible();
+
+  await page.goto('/ideas.php', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('[data-ideas-root]')).toBeVisible();
+  await expect(page.locator('[data-ideas-root] h1')).toContainText(/Ideas|灵感/);
+  await expect(page.locator('[data-empty-state]')).toBeVisible();
+
+  expect(errors).toEqual([]);
+});

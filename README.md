@@ -8,6 +8,7 @@ This repository keeps the lightweight add-ons and template overrides used on top
 
 - Personal-mode navigation cleanup for a single-user ELN workflow.
 - Experiment planner embedded into eLabFTW.
+- Empty Literature and Ideas workspaces reserved for future research workflows.
 - Visual freezer/storage map linked to eLabFTW resources.
 - Experiment diagram panel for drawing workflow sketches above the main text.
 - Lightweight Google Drive file links on experiment and resource edit pages.
@@ -24,6 +25,8 @@ The repository stores code only. Runtime data, uploaded files, database contents
 ├── head.html                    # eLabFTW navigation template override
 ├── personal-mode.html           # Tools page documenting hidden/kept entries
 ├── planner.html                 # Planner page shell
+├── literature.html              # Literature workspace shell
+├── ideas.html                   # Ideas workspace shell
 ├── storage-map.html             # Visual storage map shell
 ├── storage-view-edit.html       # Resource storage panel override
 ├── view.html                    # Resource view/edit override for Drive links
@@ -60,6 +63,12 @@ The `personal-mode.html` page records what was hidden so the customization is re
 The planner adds a personal experiment planning calendar inside the eLabFTW UI. It supports month/week/day views, plan status, links to experiments/resources, quick completion, deletion, and retroactive completion notes.
 
 规划日历用于安排实验事项，不等同于 eLabFTW 原生的仪器预约 Scheduler。
+
+### Literature And Ideas
+
+The Literature and Ideas entries are top-level workspace shells. They are intentionally empty for now, so their final layout can be shaped after real use cases become clearer.
+
+`文献调研` 和 `灵感` 目前只是主界面占位，保留 eLabFTW 风格的空状态，后续再决定按项目、主题、状态、实验关联或时间线组织。
 
 ### Storage Map
 
@@ -117,6 +126,10 @@ Current important override:
 /www/elabftw-data/overrides/head.html
 /www/elabftw-data/overrides/edit.html
 /www/elabftw-data/overrides/view.html
+/www/elabftw-data/overrides/literature.html
+/www/elabftw-data/overrides/ideas.html
+/www/elabftw-data/overrides/literature.php
+/www/elabftw-data/overrides/ideas.php
 /www/elabftw-data/overrides/drive-links.html
 /www/elabftw-data/overrides/drive-links-api.php
 /www/elabftw-data/overrides/storage-map.html

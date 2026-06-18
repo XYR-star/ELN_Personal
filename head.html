@@ -134,6 +134,12 @@
             {% set isActive = scriptName == 'planner.php' %}
             <a class='nav-item nav-link {{ isActive ? 'active' }}'
                 href='planner.php' {{ isActive ? 'aria-current="page"' }}>{{ App.getLang() starts with 'zh' ? '规划日历' : 'Planner' }}</a>
+            {% set isActive = scriptName == 'literature.php' %}
+            <a class='nav-item nav-link {{ isActive ? 'active' }}'
+                href='literature.php' {{ isActive ? 'aria-current="page"' }}>{{ App.getLang() starts with 'zh' ? '文献' : 'Literature' }}</a>
+            {% set isActive = scriptName == 'ideas.php' %}
+            <a class='nav-item nav-link {{ isActive ? 'active' }}'
+                href='ideas.php' {{ isActive ? 'aria-current="page"' }}>{{ App.getLang() starts with 'zh' ? '灵感' : 'Ideas' }}</a>
 
             <div class='nav-item dropdown'>
               {% if App.devMode -%}
