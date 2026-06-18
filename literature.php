@@ -16,7 +16,6 @@ try {
     $Response->prepare($Request);
     $Response->setContent($App->render('literature.html', array(
         'pageTitle' => $App->getLang() === 'zh_CN' ? '文献调研' : 'Literature',
-        'hideTitle' => true,
     )));
 } catch (AppException $e) {
     $Response = $e->getResponseFromException($App);

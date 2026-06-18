@@ -16,7 +16,6 @@ try {
     $Response->prepare($Request);
     $Response->setContent($App->render('ideas.html', array(
         'pageTitle' => $App->getLang() === 'zh_CN' ? '灵感' : 'Ideas',
-        'hideTitle' => true,
     )));
 } catch (AppException $e) {
     $Response = $e->getResponseFromException($App);

@@ -128,13 +128,30 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
 
   await page.goto('/literature.php', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-literature-root]')).toBeVisible();
-  await expect(page.locator('[data-literature-root] h1')).toContainText(/Literature|文献调研/);
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await expect(page.locator('#pageTitle')).toContainText(/Literature|文献调研/);
+  await expect(page.locator('[data-literature-root] h1')).toHaveCount(0);
   await expect(page.locator('[data-empty-state]')).toBeVisible();
 
   await page.goto('/ideas.php', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-ideas-root]')).toBeVisible();
-  await expect(page.locator('[data-ideas-root] h1')).toContainText(/Ideas|灵感/);
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await expect(page.locator('#pageTitle')).toContainText(/Ideas|灵感/);
+  await expect(page.locator('[data-ideas-root] h1')).toHaveCount(0);
   await expect(page.locator('[data-empty-state]')).toBeVisible();
+
+  expect(errors).toEqual([]);
+});
+
+test('Planner uses the native page title without an extra content h1', async ({ page }) => {
+  const errors = await collectPageErrors(page);
+  await page.goto('/planner.php', { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+
+  await expect(page.locator('[data-planner-root]')).toBeVisible();
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await expect(page.locator('#pageTitle')).toContainText(/Planner|规划日历/);
+  await expect(page.locator('[data-planner-root] h1')).toHaveCount(0);
 
   expect(errors).toEqual([]);
 });
