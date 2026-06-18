@@ -3,11 +3,7 @@
 <link rel='stylesheet' href='/planner-assets/storage-map.css?v=20260618-category1'>
 
 <div class='storage-map-page' data-storage-map-root data-api-base='/storage-map-api.php' data-initial-item-id='{{ initialItemId|default(0) }}'>
-  <div class='d-flex align-items-center justify-content-between mb-3'>
-    <div>
-      <h1 class='mb-1'>可视化存放</h1>
-      <p class='text-muted mb-0'>冰箱、抽屉、盒子和 eLabFTW Resources 的孔位关联。</p>
-    </div>
+  <div class='storage-page-actions'>
     <div class='btn-group'>
       <button class='btn btn-primary' id='storage-new-freezer' type='button'><i class='fas fa-plus fa-fw'></i> 新建冰箱</button>
       <button class='btn btn-secondary' type='button' data-action='toggle-create-modal' data-type='items'><i class='fas fa-cubes-stacked fa-fw'></i> 新建 Resource</button>

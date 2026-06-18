@@ -1,18 +1,6 @@
 {% extends 'base.html' %}
 {% block body %}
 <div class='container mt-4 mb-5' data-ideas-root>
-  <div class='d-flex align-items-start justify-content-between mb-4'>
-    <div>
-      <p class='text-muted mb-1 text-uppercase font-weight-bold'>{{ App.getLang() starts with 'zh' ? '研究想法' : 'Research thinking' }}</p>
-      <h2 class='h4 mb-2'>{{ App.getLang() starts with 'zh' ? '灵感工作区' : 'Ideas workspace' }}</h2>
-      <p class='lead mb-0'>
-        {{ App.getLang() starts with 'zh'
-          ? '这里会作为假设、问题、备忘和可能实验方向的入口。'
-          : 'A future workspace for hypotheses, questions, notes, and possible experimental directions.' }}
-      </p>
-    </div>
-  </div>
-
   <div class='row'>
     <div class='col-lg-8'>
       <div class='card' data-empty-state>

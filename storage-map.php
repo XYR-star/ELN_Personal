@@ -16,7 +16,6 @@ try {
     $Response->prepare($Request);
     $Response->setContent($App->render('storage-map.html', array(
         'pageTitle' => '可视化存放',
-        'hideTitle' => true,
         'storageMapLang' => $App->getLang(),
         'initialItemId' => (int) $Request->query->get('item_id', 0),
     )));

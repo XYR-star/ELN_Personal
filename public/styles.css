@@ -4,8 +4,7 @@
   --planner-border: #dee2e6;
   --planner-muted: #6c757d;
   --planner-soft: #f8f9fa;
-  max-width: 1480px;
-  margin: 0 auto 2rem;
+  margin-bottom: 2rem;
 }
 
 .planner-embedded * {
@@ -18,6 +17,14 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.planner-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 38px;
+  margin-top: -3.1rem;
+  margin-bottom: 1.35rem;
 }
 
 .planner-embedded .eyebrow {
@@ -93,7 +100,7 @@
 
 .planner-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 1rem;
   align-items: start;
 }
@@ -135,7 +142,7 @@
 }
 
 .calendar-grid.month {
-  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  grid-template-columns: repeat(7, minmax(78px, 1fr));
   gap: 1px;
   background: var(--planner-border);
   border: 1px solid var(--planner-border);
@@ -165,7 +172,7 @@
 }
 
 .day-cell {
-  min-height: 132px;
+  min-height: 116px;
   padding: .45rem;
   border: 0;
   cursor: pointer;
@@ -330,6 +337,12 @@
 }
 
 @media (max-width: 900px) {
+  .planner-actions-row {
+    justify-content: flex-start;
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+
   .planner-embedded .page-heading {
     align-items: stretch;
     flex-direction: column;

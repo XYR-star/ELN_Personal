@@ -81,6 +81,9 @@ test('Storage map renders main panels and no browser errors', async ({ page }) =
   await loginIfNeeded(page);
 
   await expect(page.locator('[data-storage-map-root]')).toBeVisible();
+  await expect(page.locator('#realContainer')).toHaveClass(/max-width-70/);
+  await expect(page.locator('#pageTitle')).toBeVisible();
+  await expect(page.locator('[data-storage-map-root] h1')).toHaveCount(0);
   await expect(page.locator('#storage-location-tree')).toBeVisible();
   await expect(page.locator('#storage-location-count')).toBeVisible();
   await expect(page.locator('#storage-grid')).toBeVisible();
@@ -128,6 +131,7 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
 
   await page.goto('/literature.php', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-literature-root]')).toBeVisible();
+  await expect(page.locator('#realContainer')).toHaveClass(/max-width-70/);
   await expect(page.locator('#pageTitle')).toBeVisible();
   await expect(page.locator('#pageTitle')).toContainText(/Literature|文献调研/);
   await expect(page.locator('[data-literature-root] h1')).toHaveCount(0);
@@ -135,6 +139,7 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
 
   await page.goto('/ideas.php', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-ideas-root]')).toBeVisible();
+  await expect(page.locator('#realContainer')).toHaveClass(/max-width-70/);
   await expect(page.locator('#pageTitle')).toBeVisible();
   await expect(page.locator('#pageTitle')).toContainText(/Ideas|灵感/);
   await expect(page.locator('[data-ideas-root] h1')).toHaveCount(0);
@@ -149,6 +154,7 @@ test('Planner uses the native page title without an extra content h1', async ({ 
   await loginIfNeeded(page);
 
   await expect(page.locator('[data-planner-root]')).toBeVisible();
+  await expect(page.locator('#realContainer')).toHaveClass(/max-width-70/);
   await expect(page.locator('#pageTitle')).toBeVisible();
   await expect(page.locator('#pageTitle')).toContainText(/Planner|规划日历/);
   await expect(page.locator('[data-planner-root] h1')).toHaveCount(0);
