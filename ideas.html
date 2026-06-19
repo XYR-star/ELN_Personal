@@ -1,32 +1,68 @@
 {% extends 'base.html' %}
 {% block body %}
-<div class='container mt-4 mb-5' data-ideas-root>
+<link rel='stylesheet' href='/planner-assets/ideas.css?v=20260619-memo4'>
+
+<div class='ideas-workspace' data-ideas-root data-api-base='/ideas-api.php'>
   <div class='row'>
     <div class='col-lg-8'>
-      <div class='card' data-empty-state>
-        <div class='card-body text-center py-5'>
-          <i class='fas fa-lightbulb fa-3x text-muted mb-3'></i>
-          <h2 class='h4 mb-2'>{{ App.getLang() starts with 'zh' ? '暂未放置内容' : 'No idea layout yet' }}</h2>
-          <p class='text-muted mb-0'>
-            {{ App.getLang() starts with 'zh'
-              ? '先保留这个主界面，后续可以决定按想法状态、实验关联、优先级或时间线来组织。'
-              : 'This shell is ready. The content model can later be organized by idea status, experiment links, priority, or timeline.' }}
-          </p>
+      <section class='card mb-3' data-idea-composer>
+        <div class='card-body'>
+          <form data-idea-form>
+            <label class='sr-only' for='ideaMarkdown'>{{ App.getLang() starts with 'zh' ? '记录灵感' : 'Capture an idea' }}</label>
+            <textarea id='ideaMarkdown' class='form-control idea-composer-text' data-idea-markdown rows='4' placeholder='{{ App.getLang() starts with 'zh' ? '记录一个想法、观察或待验证问题... 支持 #tag 和 [[Experiment:12]] / [[Resource:11]]' : 'Capture an idea, observation, or question... Supports #tag and [[Experiment:12]] / [[Resource:11]]' }}'></textarea>
+            <div class='row mt-2'>
+              <div class='col-md-4'>
+                <label class='small text-muted mb-1' for='ideaTags'>{{ App.getLang() starts with 'zh' ? '标签（可选）' : 'Tags (optional)' }}</label>
+                <input id='ideaTags' class='form-control' data-idea-tags placeholder='{{ App.getLang() starts with 'zh' ? '#cell, #faps...' : '#cell, #faps...' }}'>
+              </div>
+              <div class='col-md-4 mt-2 mt-md-0'>
+                <label class='small text-muted mb-1' for='ideaLocation'>{{ App.getLang() starts with 'zh' ? '位置（可选）' : 'Location (optional)' }}</label>
+                <input id='ideaLocation' class='form-control' data-idea-location placeholder='{{ App.getLang() starts with 'zh' ? '实验室、会议、采样地点...' : 'Lab, meeting, sampling site...' }}'>
+              </div>
+              <div class='col-md-4 d-flex align-items-end justify-content-md-end mt-2 mt-md-0'>
+                <input type='hidden' data-idea-editing-id>
+                <button type='button' class='btn btn-ghost hl-hover-gray mr-2' data-idea-cancel hidden>{{ App.getLang() starts with 'zh' ? '取消编辑' : 'Cancel edit' }}</button>
+                <button type='submit' class='btn btn-primary' data-idea-save><i class='fas fa-paper-plane fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '保存灵感' : 'Save idea' }}</button>
+              </div>
+            </div>
+          </form>
+          <div class='alert alert-danger mt-3 mb-0' data-ideas-error hidden></div>
         </div>
-      </div>
+      </section>
+
+      <section class='ideas-list' data-ideas-list aria-live='polite'>
+        <div class='card' data-ideas-empty>
+          <div class='card-body text-center py-5'>
+            <i class='fas fa-lightbulb fa-3x text-muted mb-3'></i>
+            <h2 class='h4 mb-2'>{{ App.getLang() starts with 'zh' ? '还没有灵感记录' : 'No ideas yet' }}</h2>
+            <p class='text-muted mb-0'>{{ App.getLang() starts with 'zh' ? '从上面的输入框开始，后续可以把它链接到实验或资源。' : 'Start from the composer above, then link notes to experiments or resources.' }}</p>
+          </div>
+        </div>
+      </section>
     </div>
-    <div class='col-lg-4 mt-3 mt-lg-0'>
-      <div class='card'>
-        <div class='card-header font-weight-bold'>
-          {{ App.getLang() starts with 'zh' ? '预留区域' : 'Reserved areas' }}
+
+    <aside class='col-lg-4 mt-3 mt-lg-0'>
+      <section class='card ideas-side-panel'>
+        <div class='card-body'>
+          <div class='d-flex align-items-center justify-content-between mb-2'>
+            <h2 class='h4 mb-0'>{{ App.getLang() starts with 'zh' ? '日期筛选' : 'Calendar' }}</h2>
+            <button type='button' class='btn btn-secondary btn-sm' data-ideas-clear-date>{{ App.getLang() starts with 'zh' ? '全部' : 'All' }}</button>
+          </div>
+          <input type='date' class='form-control mb-3' data-ideas-date>
+          <div class='ideas-calendar' data-ideas-calendar></div>
+          <hr>
+          <div class='d-flex align-items-center justify-content-between mb-2'>
+            <h3 class='h5 mb-0'>{{ App.getLang() starts with 'zh' ? '标签' : 'Tags' }}</h3>
+            <button type='button' class='btn btn-ghost btn-sm' data-ideas-clear-filters>{{ App.getLang() starts with 'zh' ? '清除筛选' : 'Clear filters' }}</button>
+          </div>
+          <div class='ideas-filter-list mb-3' data-ideas-tag-filters></div>
+          <h3 class='h5 mb-2'>{{ App.getLang() starts with 'zh' ? '位置' : 'Locations' }}</h3>
+          <div class='ideas-filter-list' data-ideas-location-filters></div>
         </div>
-        <div class='list-group list-group-flush'>
-          <div class='list-group-item text-muted'><i class='fas fa-seedling fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '想法草稿' : 'Idea drafts' }}</div>
-          <div class='list-group-item text-muted'><i class='fas fa-flask fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '关联实验' : 'Linked experiments' }}</div>
-          <div class='list-group-item text-muted'><i class='fas fa-list-check fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '待验证问题' : 'Questions to test' }}</div>
-        </div>
-      </div>
-    </div>
+      </section>
+    </aside>
   </div>
 </div>
+
+<script defer src='/planner-assets/ideas.js?v=20260619-memo4'></script>
 {% endblock %}

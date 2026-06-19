@@ -2,6 +2,9 @@
 
 {% block body %}
 <link rel='stylesheet' href='/planner-assets/mobile-quick-upload.css?v=20260618-mobile-upload1'>
+{% if Entity.entityType.value == 'experiments' %}
+<link rel='stylesheet' href='/planner-assets/silverbullet-editor.css?v=20260619-sb5'>
+{% endif %}
 
 {% embed 'view-edit.html' %}
   {% block createnew %}
@@ -79,6 +82,10 @@
     {% include 'experiment-diagram.html' %}
   {% endif %}
     {% include 'drive-links.html' %}
+  {% endif %}
+
+  {% if Entity.entityType.value == 'experiments' %}
+    {% include 'silverbullet-editor.html' %}
   {% endif %}
 
   {# BODY #}
@@ -226,4 +233,7 @@
 >
 </div>
 <script defer src='/planner-assets/mobile-quick-upload.js?v=20260618-mobile-upload1'></script>
+{% if Entity.entityType.value == 'experiments' %}
+<script defer src='/planner-assets/silverbullet-editor.js?v=20260619-sb5'></script>
+{% endif %}
 {% endblock body %}

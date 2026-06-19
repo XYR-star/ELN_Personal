@@ -1,0 +1,139 @@
+.ideas-workspace {
+  --ideas-accent: #29aeb9;
+  --ideas-border: #dee2e6;
+  --ideas-muted: #6c757d;
+  margin-bottom: 2rem;
+}
+
+.idea-composer-text {
+  min-height: 118px;
+  resize: vertical;
+}
+
+.ideas-list {
+  display: grid;
+  gap: .75rem;
+}
+
+.idea-card {
+  border-left: 4px solid var(--ideas-accent);
+}
+
+.idea-markdown {
+  white-space: pre-wrap;
+}
+
+.idea-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  align-items: center;
+  color: var(--ideas-muted);
+  font-size: .88rem;
+}
+
+.idea-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: .12rem .45rem;
+  color: #495057;
+  background: #f1f3f5;
+  border-radius: .2rem;
+}
+
+.idea-chip-clickable,
+[data-ideas-filter-tag],
+[data-ideas-filter-location] {
+  cursor: pointer;
+}
+
+.idea-chip-clickable:hover {
+  color: #212529;
+  background: #e9ecef;
+}
+
+.ideas-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.ideas-filter-chip {
+  border: 1px solid var(--ideas-border);
+  background: #fff;
+}
+
+.ideas-filter-chip.is-active {
+  color: #fff;
+  background: var(--ideas-accent);
+  border-color: var(--ideas-accent);
+}
+
+.ideas-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--ideas-border);
+  border-radius: .25rem;
+  background: var(--ideas-border);
+}
+
+.ideas-calendar-day,
+.ideas-calendar-weekday {
+  min-height: 38px;
+  border: 0;
+  background: #fff;
+}
+
+.ideas-calendar-weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ideas-muted);
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.ideas-calendar-day {
+  position: relative;
+  color: #343a40;
+}
+
+.ideas-calendar-day:hover {
+  background: #f8f9fa;
+}
+
+.ideas-calendar-day.is-selected {
+  box-shadow: inset 0 0 0 2px var(--ideas-accent);
+}
+
+.ideas-calendar-day.has-idea::after {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  width: 6px;
+  height: 6px;
+  content: '';
+  background: var(--ideas-accent);
+  border-radius: 50%;
+}
+
+.ideas-side-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .ideas-side-panel {
+    position: static;
+  }
+
+  .idea-card .btn-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+    margin-top: .75rem;
+  }
+}

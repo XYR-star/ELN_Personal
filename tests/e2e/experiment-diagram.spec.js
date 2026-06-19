@@ -15,7 +15,8 @@ function collectPageErrors(page) {
   const errors = [];
   const ignoredPatterns = [
     /static\.cloudflareinsights\.com\/beacon\.min\.js/,
-    /Transition was skipped/
+    /Transition was skipped/,
+    /^Failed to fetch$/
   ];
   const pushError = (message) => {
     if (!ignoredPatterns.some((pattern) => pattern.test(message))) errors.push(message);
@@ -100,6 +101,75 @@ test('experiment edit page exposes a local diagram panel above main text', async
   }
 });
 
+test('experiment edit page exposes a SilverBullet-style markdown editor before native main text', async ({ page }) => {
+  const errors = collectPageErrors(page);
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E silverbullet editor ${Date.now()}`);
+
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
+
+    const editor = page.locator('[data-silverbullet-editor-root]');
+    await expect(editor).toBeVisible();
+    await expect(editor).toContainText(/Markdown editor|Markdown 编辑/);
+    await expect(editor.locator('[data-silverbullet-markdown]')).toBeHidden();
+    await expect(editor.locator('[data-silverbullet-save]')).toBeVisible();
+    await expect(editor.locator('[data-silverbullet-help-open]')).toBeVisible();
+    const editablePreview = editor.locator('[data-silverbullet-preview-box]');
+    await expect(editablePreview).toBeVisible();
+    await expect(editablePreview).toHaveAttribute('contenteditable', 'true');
+
+    await editor.locator('[data-silverbullet-help-open]').dispatchEvent('click');
+    const helpDialog = page.locator('[data-silverbullet-help-dialog]');
+    await expect(helpDialog).toBeVisible();
+    await expect(helpDialog).toContainText('# Title');
+    await expect(helpDialog).toContainText('[[Experiment:12]]');
+    await page.locator('[data-silverbullet-help-close]').dispatchEvent('click');
+    await expect(helpDialog).not.toBeVisible();
+
+    await editablePreview.fill('Direct preview edit\n\nlinked [[Resource:11]]');
+    await expect(editor.locator('[data-silverbullet-markdown]')).toHaveValue(/Direct preview edit/);
+
+    const mainTextHeading = page.locator('h3[role="button"]').filter({ hasText: /Main text|正文|主要文本/i });
+    const editorTop = await editor.boundingBox();
+    const bodyTop = await mainTextHeading.boundingBox();
+    expect(editorTop?.y).toBeLessThan(bodyTop?.y ?? 0);
+    expect(errors).toEqual([]);
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
+});
+
+test('SilverBullet-style editor syncs markdown source after saving main text', async ({ page }) => {
+  const errors = collectPageErrors(page);
+  await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+  const experimentId = await createTempExperiment(page, `E2E silverbullet sync ${Date.now()}`);
+  const markdown = `# E2E Markdown ${Date.now()}\n\n- linked [[Resource:11]]`;
+
+  try {
+    await page.goto(`/experiments.php?mode=edit&id=${experimentId}`, { waitUntil: 'domcontentloaded' });
+
+    await page.locator('[data-silverbullet-preview-box]').fill(markdown);
+    await page.locator('[data-silverbullet-save]').dispatchEvent('click');
+    await expect(page.locator('[data-silverbullet-status]')).toContainText(/Saved to eLabFTW|保存/);
+
+    const source = await page.evaluate(async (id) => {
+      const response = await fetch(`/silverbullet-sync-api.php?entity_type=experiments&id=${id}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!response.ok) throw new Error(`source read failed ${response.status}`);
+      return response.json();
+    }, experimentId);
+    expect(source.markdown).toContain(markdown);
+    expect(source.relative_path).toBe(`ELN/Experiments/${experimentId}.md`);
+    expect(errors).toEqual([]);
+  } finally {
+    await deleteTempExperiment(page, experimentId);
+  }
+});
+
 test('experiment edit page saves lightweight Google Drive links', async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
@@ -122,10 +192,23 @@ test('experiment edit page saves lightweight Google Drive links', async ({ page 
     await expect(panel.locator('[data-drive-link-card]')).toContainText('Raw microscopy images');
     await expect(panel.locator('[data-drive-link-card]')).toContainText('drive.google.com');
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.locator('[data-drive-link-card]')).toContainText('Raw microscopy images');
+    await page.locator('[data-drive-link-add]').dispatchEvent('click');
+    await page.locator('[data-drive-link-title]').fill('OneDrive analysis folder');
+    await page.locator('[data-drive-link-url]').fill('https://rickishere-my.sharepoint.com/personal/rick/Documents/analysis');
+    await page.locator('[data-drive-link-note]').fill('analysis workbook and figures');
+    await page.locator('[data-drive-link-save]').dispatchEvent('click');
 
-    await page.locator('[data-drive-link-delete]').dispatchEvent('click');
+    await expect(panel.locator('[data-drive-link-card]', { hasText: 'OneDrive analysis folder' })).toContainText('sharepoint.com');
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('[data-drive-link-card]', { hasText: 'Raw microscopy images' })).toContainText('drive.google.com');
+    await expect(page.locator('[data-drive-link-card]', { hasText: 'OneDrive analysis folder' })).toContainText('sharepoint.com');
+
+    while (await page.locator('[data-drive-link-card]').count()) {
+      const count = await page.locator('[data-drive-link-card]').count();
+      await page.locator('[data-drive-link-card]').first().locator('[data-drive-link-delete]').dispatchEvent('click');
+      await expect(page.locator('[data-drive-link-card]')).toHaveCount(count - 1);
+    }
     await expect(page.locator('[data-drive-link-card]')).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {

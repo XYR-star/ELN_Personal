@@ -49,7 +49,7 @@
     try {
       return new URL(url).host;
     } catch {
-      return 'Google Drive';
+      return 'Drive file';
     }
   }
 
@@ -74,7 +74,7 @@
       top.className = 'd-flex justify-content-between align-items-start';
 
       const content = document.createElement('div');
-      content.append(createText('div', 'drive-link-title', link.title || 'Google Drive file'));
+      content.append(createText('div', 'drive-link-title', link.title || 'Cloud drive file'));
       content.append(createText('div', 'drive-link-url text-muted small mt-1', hostLabel(link.url)));
       if (link.note) content.append(createText('div', 'mt-2', link.note));
 
@@ -121,7 +121,7 @@
   async function saveLink() {
     setError('');
     if (!urlInput?.value.trim()) {
-      setError('Google Drive URL is required.');
+      setError('Drive URL is required.');
       urlInput?.focus();
       return;
     }

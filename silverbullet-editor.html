@@ -1,0 +1,41 @@
+<section class='silverbullet-editor mt-3 mb-3' data-silverbullet-editor-root data-entity-type='{{ Entity.entityType.value }}' data-entity-id='{{ Entity.id }}' data-api-base='/silverbullet-sync-api.php'>
+  <div class='d-flex flex-wrap align-items-center justify-content-between mb-2'>
+    <h3 class='h5 mb-0'><i class='fas fa-feather-pointed fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'Markdown 编辑' : 'Markdown editor' }}</h3>
+    <div class='btn-group mt-2 mt-sm-0'>
+      <button type='button' class='btn btn-secondary btn-sm' data-silverbullet-help-open><i class='fas fa-question-circle fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '规则' : 'Rules' }}</button>
+      <button type='button' class='btn btn-secondary btn-sm' data-silverbullet-preview><i class='fas fa-sync-alt fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '刷新预览' : 'Refresh preview' }}</button>
+      <button type='button' class='btn btn-secondary btn-sm' data-silverbullet-native><i class='fas fa-code fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '原生编辑器' : 'Native editor' }}</button>
+      <button type='button' class='btn btn-primary btn-sm' data-silverbullet-save><i class='fas fa-save fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '保存' : 'Save' }}</button>
+    </div>
+  </div>
+  <textarea class='silverbullet-markdown-source' data-silverbullet-markdown hidden></textarea>
+  <div class='silverbullet-preview' data-silverbullet-preview-box contenteditable='true' role='textbox' aria-multiline='true' aria-label='{{ App.getLang() starts with 'zh' ? 'Markdown 正文编辑区' : 'Markdown body editor' }}'></div>
+  <div class='small mt-2' data-silverbullet-status aria-live='polite'></div>
+  <script type='application/json' data-silverbullet-initial>{{ Entity.entityData.body|json_encode|raw }}</script>
+  <script type='application/json' data-silverbullet-title>{{ Entity.entityData.title|json_encode|raw }}</script>
+</section>
+
+<dialog class='silverbullet-help-dialog' data-silverbullet-help-dialog>
+  <div class='silverbullet-help-header'>
+    <h2 class='h4 mb-0'>{{ App.getLang() starts with 'zh' ? 'Markdown 规则' : 'Markdown rules' }}</h2>
+    <button type='button' class='btn btn-secondary btn-sm' data-silverbullet-help-close aria-label='{{ 'Close'|trans }}'>
+      <i class='fas fa-times fa-fw'></i>
+    </button>
+  </div>
+  <div class='silverbullet-help-body'>
+    <dl class='mb-0'>
+      <dt># Title</dt>
+      <dd>{{ App.getLang() starts with 'zh' ? '一级标题；用 ## 和 ### 写更小标题。' : 'Heading; use ## and ### for smaller headings.' }}</dd>
+      <dt>**bold text**</dt>
+      <dd>{{ App.getLang() starts with 'zh' ? '加粗重点内容。' : 'Bold important text.' }}</dd>
+      <dt>`code`</dt>
+      <dd>{{ App.getLang() starts with 'zh' ? '标记短代码、试剂名或参数。' : 'Mark short code, reagent names, or parameters.' }}</dd>
+      <dt>- item</dt>
+      <dd>{{ App.getLang() starts with 'zh' ? '列表项目。' : 'List item.' }}</dd>
+      <dt>[[Experiment:12]]</dt>
+      <dd>{{ App.getLang() starts with 'zh' ? '链接到实验记录。' : 'Link to an experiment.' }}</dd>
+      <dt>[[Resource:11]]</dt>
+      <dd>{{ App.getLang() starts with 'zh' ? '链接到资源或库存条目。' : 'Link to a resource or inventory item.' }}</dd>
+    </dl>
+  </div>
+</dialog>

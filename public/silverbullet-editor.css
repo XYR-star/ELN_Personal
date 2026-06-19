@@ -1,0 +1,86 @@
+.silverbullet-editor {
+  max-width: 100%;
+}
+
+.silverbullet-preview {
+  min-height: 320px;
+  max-height: 520px;
+  overflow: auto;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+  line-height: 1.55;
+  outline: none;
+  white-space: normal;
+}
+
+.silverbullet-preview:focus {
+  border-color: #29aeb9;
+  box-shadow: 0 0 0 .2rem rgba(41, 174, 185, .18);
+}
+
+.silverbullet-preview h1,
+.silverbullet-preview h2,
+.silverbullet-preview h3 {
+  margin-top: .5rem;
+}
+
+.silverbullet-preview code {
+  padding: .1rem .25rem;
+  background: #f1f3f5;
+  border-radius: 3px;
+}
+
+.silverbullet-help-dialog {
+  width: min(680px, calc(100vw - 32px));
+  padding: 0;
+  color: #495057;
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+  box-shadow: 0 14px 42px rgba(0, 0, 0, .24);
+}
+
+.silverbullet-help-dialog::backdrop {
+  background: rgba(0, 0, 0, .28);
+}
+
+.silverbullet-help-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid #d5dde3;
+}
+
+.silverbullet-help-body {
+  padding: 16px 18px 18px;
+}
+
+.silverbullet-help-body dt {
+  margin-top: .65rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  color: #343a40;
+}
+
+.silverbullet-help-body dt:first-child {
+  margin-top: 0;
+}
+
+.silverbullet-help-body dd {
+  margin-bottom: .45rem;
+  color: #6c757d;
+}
+
+@media (max-width: 767.98px) {
+  .silverbullet-editor .btn-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+  }
+
+  .silverbullet-preview {
+    min-height: 240px;
+  }
+}

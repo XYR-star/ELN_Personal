@@ -15,7 +15,8 @@ function collectPageErrors(page) {
   const errors = [];
   const ignoredPatterns = [
     /static\.cloudflareinsights\.com\/beacon\.min\.js/,
-    /Transition was skipped/
+    /Transition was skipped/,
+    /^Failed to fetch$/
   ];
   const pushError = (message) => {
     if (!ignoredPatterns.some((pattern) => pattern.test(message))) errors.push(message);

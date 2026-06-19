@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 function loadLocalEnv(file = '.env.e2e') {
   if (!existsSync(file)) return;
@@ -22,7 +23,8 @@ async function collectPageErrors(page) {
   const errors = [];
   const ignoredPatterns = [
     /static\.cloudflareinsights\.com\/beacon\.min\.js/,
-    /Transition was skipped/
+    /Transition was skipped/,
+    /^Failed to fetch$/
   ];
   const pushError = (message) => {
     if (!ignoredPatterns.some((pattern) => pattern.test(message))) {
@@ -55,6 +57,8 @@ async function loginIfNeeded(page) {
   await loginButton.click();
   await page.waitForLoadState('domcontentloaded');
   await expect(page).not.toHaveURL(/login|logout/);
+  mkdirSync(dirname(authFile), { recursive: true });
+  await page.context().storageState({ path: authFile });
 }
 
 if (existsSync(authFile)) {
@@ -143,7 +147,10 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
   await expect(page.locator('#pageTitle')).toBeVisible();
   await expect(page.locator('#pageTitle')).toContainText(/Ideas|灵感/);
   await expect(page.locator('[data-ideas-root] h1')).toHaveCount(0);
-  await expect(page.locator('[data-empty-state]')).toBeVisible();
+  await expect(page.locator('[data-idea-composer]')).toBeVisible();
+  await expect(page.locator('[data-idea-markdown]')).toBeVisible();
+  await expect(page.locator('[data-ideas-list]')).toBeVisible();
+  await expect(page.locator('[data-ideas-calendar]')).toBeVisible();
 
   expect(errors).toEqual([]);
 });
@@ -160,6 +167,65 @@ test('Planner uses the native page title without an extra content h1', async ({ 
   await expect(page.locator('[data-planner-root] h1')).toHaveCount(0);
   await expect(page.locator('[data-planner-root]')).not.toContainText(/Experiment Planner|实验规划日历/);
   await expect(page.locator('.planner-actions')).toBeVisible();
+
+  expect(errors).toEqual([]);
+});
+
+test('Ideas memo UI can create, edit, persist, and delete a memo', async ({ page }) => {
+  const errors = await collectPageErrors(page);
+  const suffix = `${Date.now()}`.slice(-6);
+  const firstText = `E2E idea ${suffix} #faps [[Experiment:12]]`;
+  const otherText = `E2E other idea ${suffix} #other`;
+  const secondText = `E2E idea edited ${suffix} #rna [[Resource:11]]`;
+
+  await page.goto('/ideas.php', { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+
+  await page.locator('[data-idea-markdown]').fill(firstText);
+  await page.locator('[data-idea-tags]').fill('#manual');
+  await page.locator('[data-idea-location]').fill(`E2E bench ${suffix}`);
+  await page.locator('[data-idea-save]').dispatchEvent('click');
+  await expect(page.locator('[data-idea-card]', { hasText: firstText })).toBeVisible();
+  await expect(page.locator('[data-idea-card]', { hasText: firstText })).toContainText('#manual');
+
+  await page.locator('[data-idea-markdown]').fill(otherText);
+  await page.locator('[data-idea-tags]').fill('#other-manual');
+  await page.locator('[data-idea-location]').fill(`E2E other ${suffix}`);
+  await page.locator('[data-idea-save]').dispatchEvent('click');
+  await expect(page.locator('[data-idea-card]', { hasText: otherText })).toBeVisible();
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('[data-idea-card]', { hasText: firstText })).toBeVisible();
+  await expect(page.locator('[data-idea-card]', { hasText: firstText })).toContainText('#manual');
+  const manualFilter = page.locator('[data-ideas-tag-filters] [data-ideas-filter-tag="manual"]');
+  const benchFilter = page.locator(`[data-ideas-location-filters] [data-ideas-filter-location="E2E bench ${suffix}"]`);
+  await expect(manualFilter).toBeVisible();
+  await expect(benchFilter).toBeVisible();
+
+  await manualFilter.dispatchEvent('click');
+  await expect(page.locator('[data-idea-card]', { hasText: firstText })).toBeVisible();
+  await expect(page.locator('[data-idea-card]', { hasText: otherText })).toHaveCount(0);
+
+  await page.locator('[data-ideas-clear-filters]').click();
+  await benchFilter.dispatchEvent('click');
+  await expect(page.locator('[data-idea-card]', { hasText: firstText })).toBeVisible();
+  await expect(page.locator('[data-idea-card]', { hasText: otherText })).toHaveCount(0);
+  await page.locator('[data-ideas-clear-filters]').click();
+
+  const card = page.locator('[data-idea-card]', { hasText: firstText }).first();
+  await card.locator('[data-idea-edit]').click();
+  await page.locator('[data-idea-markdown]').fill(secondText);
+  await page.locator('[data-idea-tags]').fill('#manual-edited');
+  await page.locator('[data-idea-location]').fill('');
+  await page.locator('[data-idea-save]').dispatchEvent('click');
+  await expect(page.locator('[data-idea-card]', { hasText: secondText })).toBeVisible();
+  await expect(page.locator('[data-idea-card]', { hasText: secondText })).toContainText('#manual-edited');
+  await expect(page.locator('[data-idea-card]', { hasText: firstText })).toHaveCount(0);
+
+  await page.locator('[data-idea-card]', { hasText: secondText }).first().locator('[data-idea-delete]').click();
+  await expect(page.locator('[data-idea-card]', { hasText: secondText })).toHaveCount(0);
+  await page.locator('[data-idea-card]', { hasText: otherText }).first().locator('[data-idea-delete]').click();
+  await expect(page.locator('[data-idea-card]', { hasText: otherText })).toHaveCount(0);
 
   expect(errors).toEqual([]);
 });

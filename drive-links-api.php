@@ -81,8 +81,10 @@ function driveLinksValidateUrl(mixed $value): string
     if (!in_array($scheme, array('http', 'https'), true)) {
         throw new Exception('Drive URL must start with http or https');
     }
-    if (!in_array($host, array('drive.google.com', 'docs.google.com'), true)) {
-        throw new Exception('Only Google Drive or Google Docs links are supported in this lightweight version');
+    $allowedHosts = array('drive.google.com', 'docs.google.com', 'onedrive.live.com', '1drv.ms');
+    $isSharepoint = str_ends_with($host, '.sharepoint.com') || $host === 'sharepoint.com';
+    if (!in_array($host, $allowedHosts, true) && !$isSharepoint) {
+        throw new Exception('Only Google Drive, Google Docs, OneDrive, or SharePoint links are supported in this lightweight version');
     }
     return $url;
 }
@@ -119,7 +121,7 @@ try {
         $title = driveLinksCleanText($body['title'] ?? '', 255);
         $note = driveLinksCleanText($body['note'] ?? '', 1000);
         if ($title === '') {
-            $title = 'Google Drive file';
+            $title = 'Cloud drive file';
         }
 
         $req = $Db->prepare('INSERT INTO ricky_drive_links(team, entity_type, entity_id, title, url, note, created_by, modified_by)
