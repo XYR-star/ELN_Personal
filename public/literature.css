@@ -17,7 +17,7 @@
 
 .literature-grid {
   display: grid;
-  grid-template-columns: 260px minmax(360px, 1fr) 360px;
+  grid-template-columns: 250px minmax(320px, .82fr) minmax(520px, 1.18fr);
   gap: 1rem;
   align-items: start;
 }
@@ -106,6 +106,8 @@
 .literature-card-form {
   display: grid;
   gap: .75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--literature-border);
 }
 
 .literature-card-form label,
@@ -122,9 +124,22 @@
   border-top: 1px solid var(--literature-border);
 }
 
+.literature-section-head {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .5rem;
+}
+
 .literature-evidence-list {
   display: grid;
   gap: .6rem;
+}
+
+.literature-evidence-list h4 {
+  color: #495057;
+  font-weight: 700;
 }
 
 .literature-evidence-card {
@@ -135,11 +150,25 @@
   border-radius: .2rem;
 }
 
+.literature-evidence-card-head {
+  display: flex;
+  gap: .75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .literature-evidence-quote {
   padding: .5rem .75rem;
   color: #495057;
   background: #f8f9fa;
   border-left: 3px solid #ced4da;
+  white-space: pre-wrap;
+}
+
+.literature-evidence-reference {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .literature-evidence-form {
@@ -149,6 +178,10 @@
   background: #f8f9fa;
   border: 1px solid var(--literature-border);
   border-radius: .2rem;
+}
+
+.literature-evidence-textarea {
+  min-height: 9rem;
 }
 
 .literature-dialog {
@@ -184,6 +217,132 @@
   color: #343a40;
 }
 
+.literature-pdf-dialog {
+  width: min(1500px, calc(100vw - 2rem));
+  height: min(920px, calc(100vh - 2rem));
+  overflow: hidden;
+}
+
+.literature-pdf-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1rem;
+  height: calc(100% - 4rem);
+}
+
+.literature-pdf-sidebar {
+  overflow: auto;
+  padding-right: .25rem;
+}
+
+.literature-pdf-attachments,
+.literature-pdf-annotations {
+  display: grid;
+  gap: .5rem;
+}
+
+.literature-pdf-attachments .btn {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.literature-pdf-tools {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.literature-pdf-main {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--literature-border);
+  border-radius: .2rem;
+}
+
+.literature-pdf-toolbar {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  padding: .55rem .75rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid var(--literature-border);
+}
+
+.literature-pdf-page {
+  min-width: 4.5rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.literature-pdf-canvas-wrap {
+  position: relative;
+  height: calc(100% - 46px);
+  overflow: auto;
+  padding: 1rem;
+  background: #e9ecef;
+}
+
+.literature-pdf-canvas-wrap canvas {
+  display: block;
+  background: #fff;
+  box-shadow: 0 .15rem .6rem rgb(0 0 0 / 16%);
+}
+
+.literature-attachment-image {
+  display: block;
+  max-width: none;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 .15rem .6rem rgb(0 0 0 / 16%);
+}
+
+.literature-attachment-html {
+  display: block;
+  max-width: none;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 .15rem .6rem rgb(0 0 0 / 16%);
+}
+
+.literature-pdf-overlay {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.literature-pdf-mark {
+  position: absolute;
+  padding: 0;
+  border: 3px solid var(--literature-accent);
+  background: transparent;
+}
+
+.literature-pdf-mark.is-highlight {
+  border: 0;
+  background: rgb(255 224 102 / 45%);
+}
+
+.literature-pdf-mark.is-ellipse {
+  border-radius: 50%;
+}
+
+.literature-pdf-mark.is-draft {
+  pointer-events: none;
+  outline: 2px dashed #495057;
+  outline-offset: 2px;
+}
+
+.literature-pdf-annotation-card {
+  padding: .65rem;
+  background: #fff;
+  border: 1px solid var(--literature-border);
+  border-left: 4px solid var(--literature-accent);
+  border-radius: .2rem;
+}
+
 @media (max-width: 1199.98px) {
   .literature-grid {
     grid-template-columns: 220px minmax(0, 1fr);
@@ -192,6 +351,24 @@
   .literature-detail-panel {
     grid-column: 1 / -1;
     position: static;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .literature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .literature-sidebar {
+    position: static;
+  }
+
+  .literature-pdf-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .literature-pdf-sidebar {
+    max-height: 280px;
   }
 }
 
@@ -208,5 +385,13 @@
 
   .literature-list-panel {
     margin-bottom: 1rem;
+  }
+
+  .literature-evidence-card-head {
+    display: block;
+  }
+
+  .literature-evidence-card-head .btn-group {
+    margin-top: .5rem;
   }
 }

@@ -25,6 +25,24 @@
   const paperDialog = root.querySelector('[data-literature-paper-dialog]');
   const paperForm = root.querySelector('[data-literature-paper-form]');
   const paperError = root.querySelector('[data-literature-paper-error]');
+  const pdfDialog = root.querySelector('[data-literature-pdf-dialog]');
+  const pdfTitle = root.querySelector('[data-literature-pdf-title]');
+  const pdfAttachments = root.querySelector('[data-literature-pdf-attachments]');
+  const pdfStatus = root.querySelector('[data-literature-pdf-status]');
+  const pdfCanvasWrap = root.querySelector('[data-literature-pdf-canvas-wrap]');
+  const pdfCanvas = root.querySelector('[data-literature-pdf-canvas]');
+  const attachmentImage = root.querySelector('[data-literature-attachment-image]');
+  const attachmentHtml = root.querySelector('[data-literature-attachment-html]');
+  const pdfOverlay = root.querySelector('[data-literature-pdf-overlay]');
+  const pdfPageLabel = root.querySelector('[data-literature-pdf-page]');
+  const pdfToolButtons = root.querySelectorAll('[data-literature-pdf-tool]');
+  const pdfPrevButton = root.querySelector('[data-literature-pdf-prev]');
+  const pdfNextButton = root.querySelector('[data-literature-pdf-next]');
+  const pdfZoomInButton = root.querySelector('[data-literature-pdf-zoom-in]');
+  const pdfZoomOutButton = root.querySelector('[data-literature-pdf-zoom-out]');
+  const pdfNoteInput = root.querySelector('[data-literature-pdf-note]');
+  const pdfQuoteInput = root.querySelector('[data-literature-pdf-quote]');
+  const pdfAnnotationList = root.querySelector('[data-literature-pdf-annotations]');
 
   let state = {
     configured: false,
@@ -40,10 +58,25 @@
     tags: [],
     cards: {},
     evidence: {},
+    annotations: {},
     selectedKey: '',
     collection: '',
     tag: '',
     q: '',
+  };
+
+  let pdfState = {
+    item: null,
+    attachments: [],
+    annotations: [],
+    selectedAttachment: null,
+    pdfDoc: null,
+    pdfjs: null,
+    viewKind: '',
+    page: 1,
+    scale: 1.25,
+    tool: 'highlight',
+    drawing: null,
   };
 
   function csrfHeaders(hasBody = false) {
@@ -112,6 +145,10 @@
     return state.evidence[key] || [];
   }
 
+  function annotationsFor(key) {
+    return state.annotations[key] || [];
+  }
+
   function statusLabel(status) {
     return ({
       unread: isZh ? '未读' : 'Unread',
@@ -119,6 +156,42 @@
       read: isZh ? '已读' : 'Read',
       important: isZh ? '重要' : 'Important',
     })[status] || status;
+  }
+
+  function cleanInline(value) {
+    return String(value || '').trim();
+  }
+
+  function authorSummary(creators = []) {
+    const names = Array.isArray(creators) ? creators.filter(Boolean) : [];
+    if (!names.length) return '';
+    return names.length === 1 ? names[0] : `${names[0]} et al.`;
+  }
+
+  function quoteBlock(value = '') {
+    return cleanInline(value).split(/\r?\n/).map((line) => `> ${line}`).join('\n');
+  }
+
+  function evidenceMarkdown(evidence, item) {
+    const blocks = [];
+    const quote = quoteBlock(evidence.original_text || '');
+    if (quote.trim()) blocks.push(quote);
+
+    const metadata = [];
+    if (evidence.reference) metadata.push(`Evidence: ${evidence.reference}`);
+    const source = [
+      cleanInline(item?.title),
+      authorSummary(item?.creators),
+      cleanInline(item?.year),
+      cleanInline(evidence.section),
+      evidence.page ? `p.${cleanInline(evidence.page)}` : '',
+      item?.doi ? `DOI:${cleanInline(item.doi)}` : '',
+    ].filter(Boolean).join(' · ');
+    if (source) metadata.push(`Source: ${source}`);
+    if (evidence.my_note) metadata.push(`Note: ${cleanInline(evidence.my_note)}`);
+    if (metadata.length) blocks.push(metadata.join('\n'));
+
+    return blocks.join('\n\n');
   }
 
   function itemSubtitle(item) {
@@ -193,6 +266,7 @@
       if (card.linked_experiments.length) chips.append(text('span', 'literature-chip', `Exp ${card.linked_experiments.join(', ')}`));
       if (card.linked_resources.length) chips.append(text('span', 'literature-chip', `Res ${card.linked_resources.join(', ')}`));
       if (evidenceFor(item.key).length) chips.append(text('span', 'literature-chip', `${evidenceFor(item.key).length} ${isZh ? '证据' : 'evidence'}`));
+      if (annotationsFor(item.key).length) chips.append(text('span', 'literature-chip', `${annotationsFor(item.key).length} ${isZh ? '标注' : 'marks'}`));
       button.append(chips);
       list.append(button);
     }
@@ -222,71 +296,96 @@
     const actions = document.createElement('div');
     actions.className = 'btn-group flex-wrap mt-3';
     [linkButton('Zotero', item.zoteroUrl, 'fas fa-arrow-up-right-from-square'), linkButton('DOI', item.doi ? `https://doi.org/${item.doi}` : '', 'fas fa-fingerprint'), linkButton(isZh ? '原文链接' : 'URL', item.url, 'fas fa-link')].filter(Boolean).forEach((node) => actions.append(node));
+    const pdfButton = document.createElement('button');
+    pdfButton.type = 'button';
+    pdfButton.className = 'btn btn-primary btn-sm';
+    pdfButton.dataset.literatureOpenPdf = item.key;
+    pdfButton.innerHTML = `<i class="fas fa-highlighter fa-fw mr-1"></i>${isZh ? '附件标注' : 'Annotate files'}`;
+    actions.append(pdfButton);
     if (actions.childElementCount) detail.append(actions);
     if (item.abstractNote) {
       detail.append(text('h3', 'h5 mt-4', 'Abstract'));
       detail.append(text('p', 'small', item.abstractNote));
     }
 
-    const form = document.createElement('form');
-    form.className = 'literature-card-form mt-4';
-    form.dataset.literatureCardForm = item.key;
-    form.innerHTML = `
-      <label>${isZh ? '阅读状态' : 'Reading status'}
-        <select class="form-control" name="status">
-          <option value="unread">${statusLabel('unread')}</option>
-          <option value="reading">${statusLabel('reading')}</option>
-          <option value="read">${statusLabel('read')}</option>
-          <option value="important">${statusLabel('important')}</option>
-        </select>
-      </label>
-      <label>${isZh ? '一句话总结' : 'One-line summary'}
-        <input class="form-control" name="summary">
-      </label>
-      <label>${isZh ? '阅读笔记 / 实验启发' : 'Reading note / experiment context'}
-        <textarea class="form-control" name="note" rows="5"></textarea>
-      </label>
-      <label>${isZh ? '关联 Experiments' : 'Linked experiments'}
-        <input class="form-control" name="linked_experiments" placeholder="12, 18">
-      </label>
-      <label>${isZh ? '关联 Resources' : 'Linked resources'}
-        <input class="form-control" name="linked_resources" placeholder="11, 24">
-      </label>
-      <button type="submit" class="btn btn-primary justify-self-start"><i class="fas fa-save fa-fw mr-1"></i>${isZh ? '保存阅读卡片' : 'Save reading card'}</button>
-    `;
-    form.elements.status.value = card.status;
-    form.elements.summary.value = card.summary || '';
-    form.elements.note.value = card.note || '';
-    form.elements.linked_experiments.value = card.linked_experiments.join(', ');
-    form.elements.linked_resources.value = card.linked_resources.join(', ');
-    detail.append(form);
-
     const evidenceSection = document.createElement('section');
     evidenceSection.className = 'literature-evidence mt-4';
     const evidenceCards = evidenceFor(item.key);
-    evidenceSection.append(text('h3', 'h5 mb-2', isZh ? '证据卡片' : 'Evidence cards'));
+    const evidenceHead = document.createElement('div');
+    evidenceHead.className = 'literature-section-head';
+    evidenceHead.append(text('h3', 'h5 mb-0', isZh ? '摘录工作台' : 'Quote workspace'));
+    evidenceHead.append(text('span', 'badge badge-light', `${evidenceCards.length} ${isZh ? '条' : 'saved'}`));
+    evidenceSection.append(evidenceHead);
     const intro = text('p', 'text-muted small', isZh
-      ? '保存文献中的某段话、某张图或关键发现，然后把引用插入实验/资源 Markdown。'
-      : 'Save a quoted paragraph, figure, or finding, then insert the reference into experiment/resource Markdown.');
+      ? '边看文献边保存原句、图注或关键发现；复制 Markdown 块后可直接粘到实验/资源记录里。'
+      : 'Capture a quote, figure caption, or finding while reading; copy the Markdown block into experiments/resources.');
     evidenceSection.append(intro);
 
+    const evidenceForm = document.createElement('form');
+    evidenceForm.className = 'literature-evidence-form';
+    evidenceForm.dataset.literatureEvidenceForm = item.key;
+    evidenceForm.innerHTML = `
+      <div class="row">
+        <div class="col-md-4">
+          <label>${isZh ? '类型' : 'Type'}
+            <select class="form-control" name="type">
+              <option value="quote">${isZh ? '原文摘录' : 'Quote'}</option>
+              <option value="figure">${isZh ? '图片 / 图注' : 'Figure'}</option>
+              <option value="finding">${isZh ? '关键发现' : 'Finding'}</option>
+              <option value="protocol">${isZh ? '方法提示' : 'Protocol hint'}</option>
+            </select>
+          </label>
+        </div>
+        <div class="col-md-3 mt-2 mt-md-0">
+          <label>${isZh ? '页码' : 'Page'}
+            <input class="form-control" name="page" placeholder="3">
+          </label>
+        </div>
+        <div class="col-md-5 mt-2 mt-md-0">
+          <label>${isZh ? '章节 / 图号' : 'Section / figure'}
+            <input class="form-control" name="section" placeholder="Fig. 2B">
+          </label>
+        </div>
+      </div>
+      <label>${isZh ? '原文 / 图注 / 方法段落' : 'Original text / caption / method'}
+        <textarea class="form-control literature-evidence-textarea" name="original_text" rows="6" placeholder="${isZh ? '粘贴一句话、一段原文、图注，或你想回溯的材料方法细节。' : 'Paste the exact sentence, paragraph, figure caption, or method detail.'}"></textarea>
+      </label>
+      <label>${isZh ? '图片或来源 URL（可选）' : 'Figure/source URL (optional)'}
+        <input class="form-control" name="image_url" type="url" placeholder="https://...">
+      </label>
+      <label>${isZh ? '我的理解 / 为什么重要' : 'My note / why it matters'}
+        <textarea class="form-control" name="my_note" rows="3" placeholder="${isZh ? '例如：可作为某个实验的对照，或解释某个现象。' : 'Example: use as a control, or explains a phenotype.'}"></textarea>
+      </label>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-plus fa-fw mr-1"></i>${isZh ? '保存摘录' : 'Save quote'}</button>
+    `;
+    evidenceSection.append(evidenceForm);
+
     const evidenceList = document.createElement('div');
-    evidenceList.className = 'literature-evidence-list';
+    evidenceList.className = 'literature-evidence-list mt-3';
+    evidenceList.append(text('h4', 'h6 mb-0', isZh ? '已保存证据' : 'Saved evidence'));
     if (!evidenceCards.length) {
-      evidenceList.append(text('div', 'text-muted small mb-2', isZh ? '还没有证据卡片。' : 'No evidence cards yet.'));
+      evidenceList.append(text('div', 'text-muted small', isZh ? '还没有摘录。保存后可以复制 Markdown 引用块。' : 'No captures yet. Saved entries can be copied as Markdown citation blocks.'));
     }
     for (const evidence of evidenceCards) {
       const cardNode = document.createElement('article');
       cardNode.className = 'literature-evidence-card';
       const head = document.createElement('div');
-      head.className = 'd-flex justify-content-between align-items-start';
+      head.className = 'literature-evidence-card-head';
       head.append(text('strong', '', `${evidence.type}${evidence.page ? ` · p.${evidence.page}` : ''}${evidence.section ? ` · ${evidence.section}` : ''}`));
-      const copy = document.createElement('button');
-      copy.type = 'button';
-      copy.className = 'btn btn-sm btn-secondary';
-      copy.dataset.literatureCopyEvidence = evidence.reference;
-      copy.innerHTML = `<i class="fas fa-copy fa-fw mr-1"></i>${isZh ? '复制引用' : 'Copy ref'}`;
-      head.append(copy);
+      const copyGroup = document.createElement('div');
+      copyGroup.className = 'btn-group btn-group-sm';
+      const copyBlock = document.createElement('button');
+      copyBlock.type = 'button';
+      copyBlock.className = 'btn btn-secondary';
+      copyBlock.dataset.literatureCopyEvidenceMarkdown = evidenceMarkdown(evidence, item);
+      copyBlock.innerHTML = `<i class="fas fa-quote-left fa-fw mr-1"></i>${isZh ? '复制块' : 'Copy block'}`;
+      const copyRef = document.createElement('button');
+      copyRef.type = 'button';
+      copyRef.className = 'btn btn-secondary';
+      copyRef.dataset.literatureCopyEvidence = evidence.reference;
+      copyRef.innerHTML = `<i class="fas fa-link fa-fw mr-1"></i>${isZh ? '短引用' : 'Ref'}`;
+      copyGroup.append(copyBlock, copyRef);
+      head.append(copyGroup);
       cardNode.append(head);
       if (evidence.image_url) {
         const imageLink = document.createElement('a');
@@ -299,50 +398,414 @@
       }
       if (evidence.original_text) cardNode.append(text('blockquote', 'literature-evidence-quote mt-2 mb-2', evidence.original_text));
       if (evidence.my_note) cardNode.append(text('p', 'mb-1', evidence.my_note));
-      cardNode.append(text('code', 'small', evidence.reference));
+      cardNode.append(text('code', 'literature-evidence-reference small', evidence.reference));
       evidenceList.append(cardNode);
     }
     evidenceSection.append(evidenceList);
+    detail.append(evidenceSection);
 
-    const evidenceForm = document.createElement('form');
-    evidenceForm.className = 'literature-evidence-form mt-3';
-    evidenceForm.dataset.literatureEvidenceForm = item.key;
-    evidenceForm.innerHTML = `
+    const form = document.createElement('form');
+    form.className = 'literature-card-form mt-4';
+    form.dataset.literatureCardForm = item.key;
+    form.innerHTML = `
+      <div class="literature-section-head">
+        <h3 class="h5 mb-0">${isZh ? '阅读卡片' : 'Reading card'}</h3>
+      </div>
+      <label>${isZh ? '阅读状态' : 'Reading status'}
+        <select class="form-control" name="status">
+          <option value="unread">${statusLabel('unread')}</option>
+          <option value="reading">${statusLabel('reading')}</option>
+          <option value="read">${statusLabel('read')}</option>
+          <option value="important">${statusLabel('important')}</option>
+        </select>
+      </label>
+      <label>${isZh ? '一句话总结' : 'One-line summary'}
+        <input class="form-control" name="summary">
+      </label>
+      <label>${isZh ? '阅读笔记 / 实验启发' : 'Reading note / experiment context'}
+        <textarea class="form-control" name="note" rows="4"></textarea>
+      </label>
       <div class="row">
-        <div class="col-md-4">
-          <label>${isZh ? '类型' : 'Type'}
-            <select class="form-control" name="type">
-              <option value="quote">${isZh ? '段落引用' : 'Quote'}</option>
-              <option value="figure">${isZh ? '图片/图' : 'Figure'}</option>
-              <option value="finding">${isZh ? '关键发现' : 'Finding'}</option>
-              <option value="protocol">${isZh ? '方法提示' : 'Protocol hint'}</option>
-            </select>
+        <div class="col-md-6">
+          <label>${isZh ? '关联 Experiments' : 'Linked experiments'}
+            <input class="form-control" name="linked_experiments" placeholder="12, 18">
           </label>
         </div>
-        <div class="col-md-3 mt-2 mt-md-0">
-          <label>${isZh ? '页码' : 'Page'}
-            <input class="form-control" name="page" placeholder="3">
-          </label>
-        </div>
-        <div class="col-md-5 mt-2 mt-md-0">
-          <label>${isZh ? '章节/图号' : 'Section / figure'}
-            <input class="form-control" name="section" placeholder="Fig. 2B">
+        <div class="col-md-6 mt-2 mt-md-0">
+          <label>${isZh ? '关联 Resources' : 'Linked resources'}
+            <input class="form-control" name="linked_resources" placeholder="11, 24">
           </label>
         </div>
       </div>
-      <label>${isZh ? '原文段落 / 图注' : 'Original text / caption'}
-        <textarea class="form-control" name="original_text" rows="4"></textarea>
-      </label>
-      <label>${isZh ? '图片或来源 URL（可选）' : 'Figure/source URL (optional)'}
-        <input class="form-control" name="image_url" type="url" placeholder="https://...">
-      </label>
-      <label>${isZh ? '我的备注 / 为什么重要' : 'My note / why it matters'}
-        <textarea class="form-control" name="my_note" rows="3"></textarea>
-      </label>
-      <button type="submit" class="btn btn-primary"><i class="fas fa-plus fa-fw mr-1"></i>${isZh ? '保存证据' : 'Save evidence'}</button>
+      <button type="submit" class="btn btn-secondary justify-self-start"><i class="fas fa-save fa-fw mr-1"></i>${isZh ? '保存阅读卡片' : 'Save reading card'}</button>
     `;
-    evidenceSection.append(evidenceForm);
-    detail.append(evidenceSection);
+    form.elements.status.value = card.status;
+    form.elements.summary.value = card.summary || '';
+    form.elements.note.value = card.note || '';
+    form.elements.linked_experiments.value = card.linked_experiments.join(', ');
+    form.elements.linked_resources.value = card.linked_resources.join(', ');
+    detail.append(form);
+  }
+
+  function setPdfStatus(message = '') {
+    if (!pdfStatus) return;
+    pdfStatus.textContent = message;
+    pdfStatus.hidden = !message;
+  }
+
+  async function loadPdfJs() {
+    if (pdfState.pdfjs) return pdfState.pdfjs;
+    const pdfjs = await import('/planner-assets/pdfjs.js');
+    pdfjs.GlobalWorkerOptions.workerSrc = '/planner-assets/pdf.worker.js';
+    pdfState.pdfjs = pdfjs;
+    return pdfjs;
+  }
+
+  function attachmentIcon(kind) {
+    return ({
+      pdf: 'fa-file-pdf',
+      image: 'fa-file-image',
+      html: 'fa-file-code',
+      other: 'fa-file',
+    })[kind] || 'fa-file';
+  }
+
+  function renderAttachmentButtons() {
+    if (!pdfAttachments) return;
+    pdfAttachments.replaceChildren();
+    if (!pdfState.attachments.length) {
+      pdfAttachments.append(text('div', 'text-muted small', isZh ? '这个条目没有 Zotero 附件。' : 'No Zotero attachments for this item.'));
+      return;
+    }
+    for (const attachment of pdfState.attachments) {
+      const kind = attachment.kind || (attachment.is_pdf ? 'pdf' : 'other');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `btn btn-sm ${pdfState.selectedAttachment?.key === attachment.key ? 'btn-primary' : 'btn-secondary'}`;
+      button.dataset.literaturePdfAttachment = attachment.key;
+      button.disabled = !attachment.available;
+      button.innerHTML = `<i class="fas ${attachmentIcon(kind)} fa-fw mr-1"></i>${attachment.filename || attachment.title || attachment.key}`;
+      if (!attachment.available) button.title = isZh ? 'WebDAV 上还没有这个附件文件' : 'Attachment file is not available in WebDAV yet';
+      else if (!attachment.annotatable) button.title = isZh ? '可打开或下载，暂不支持标注' : 'Can be opened or downloaded; annotation is not supported yet';
+      pdfAttachments.append(button);
+    }
+  }
+
+  function renderPdfAnnotationList() {
+    if (!pdfAnnotationList) return;
+    pdfAnnotationList.replaceChildren();
+    const annotations = pdfState.annotations.filter((annotation) => annotation.attachmentKey === pdfState.selectedAttachment?.key);
+    if (!annotations.length) {
+      pdfAnnotationList.append(text('div', 'text-muted small', isZh ? '还没有标注。选择工具后在 PDF 页面上拖拽。' : 'No marks yet. Pick a tool and drag on the PDF page.'));
+      return;
+    }
+    for (const annotation of annotations) {
+      const card = document.createElement('article');
+      card.className = 'literature-pdf-annotation-card';
+      card.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+          <strong>${annotation.tool} · p.${annotation.page}</strong>
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-secondary" data-literature-copy-annotation="${annotation.reference}"><i class="fas fa-copy fa-fw"></i></button>
+            <button type="button" class="btn btn-danger" data-literature-delete-annotation="${annotation.id}"><i class="fas fa-trash fa-fw"></i></button>
+          </div>
+        </div>
+        ${annotation.quote ? `<blockquote class="literature-evidence-quote mt-2 mb-1"></blockquote>` : ''}
+        ${annotation.note ? `<p class="small mb-1"></p>` : ''}
+        <code class="small"></code>
+      `;
+      const quote = card.querySelector('blockquote');
+      if (quote) quote.textContent = annotation.quote;
+      const note = card.querySelector('p');
+      if (note) note.textContent = annotation.note;
+      card.querySelector('code').textContent = annotation.reference;
+      pdfAnnotationList.append(card);
+    }
+  }
+
+  function renderPdfMarks() {
+    if (!pdfOverlay) return;
+    pdfOverlay.querySelectorAll('.literature-pdf-mark').forEach((node) => node.remove());
+    const annotations = pdfState.annotations.filter((annotation) => annotation.attachmentKey === pdfState.selectedAttachment?.key && annotation.page === pdfState.page);
+    for (const annotation of annotations) {
+      const mark = document.createElement('button');
+      mark.type = 'button';
+      mark.className = `literature-pdf-mark is-${annotation.tool}`;
+      mark.style.left = `${annotation.rect.x * 100}%`;
+      mark.style.top = `${annotation.rect.y * 100}%`;
+      mark.style.width = `${annotation.rect.width * 100}%`;
+      mark.style.height = `${annotation.rect.height * 100}%`;
+      mark.style.borderColor = annotation.color || '#29aeb9';
+      mark.style.backgroundColor = annotation.tool === 'highlight' ? `${annotation.color || '#ffe066'}66` : 'transparent';
+      mark.title = annotation.note || annotation.quote || annotation.reference;
+      pdfOverlay.append(mark);
+    }
+  }
+
+  async function renderPdfPage() {
+    if (!pdfState.pdfDoc || !pdfCanvas || !pdfOverlay) return;
+    setPdfStatus(isZh ? '渲染 PDF...' : 'Rendering PDF...');
+    pdfState.viewKind = 'pdf';
+    pdfCanvas.hidden = false;
+    if (attachmentImage) attachmentImage.hidden = true;
+    if (attachmentHtml) attachmentHtml.hidden = true;
+    const page = await pdfState.pdfDoc.getPage(pdfState.page);
+    const viewport = page.getViewport({ scale: pdfState.scale });
+    const outputScale = Math.min(window.devicePixelRatio || 1, 3);
+    const cssWidth = Math.floor(viewport.width);
+    const cssHeight = Math.floor(viewport.height);
+    const context = pdfCanvas.getContext('2d');
+    pdfCanvas.width = Math.floor(cssWidth * outputScale);
+    pdfCanvas.height = Math.floor(cssHeight * outputScale);
+    pdfCanvas.style.width = `${cssWidth}px`;
+    pdfCanvas.style.height = `${cssHeight}px`;
+    pdfOverlay.style.width = pdfCanvas.style.width;
+    pdfOverlay.style.height = pdfCanvas.style.height;
+    if (pdfPageLabel) pdfPageLabel.textContent = `${pdfState.page} / ${pdfState.pdfDoc.numPages}`;
+    if (pdfPrevButton) pdfPrevButton.disabled = pdfState.page <= 1;
+    if (pdfNextButton) pdfNextButton.disabled = pdfState.page >= pdfState.pdfDoc.numPages;
+    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+    const renderTask = page.render({ canvasContext: context, viewport, transform });
+    await Promise.race([
+      renderTask.promise,
+      new Promise((resolve) => setTimeout(resolve, 8000)),
+    ]);
+    renderPdfMarks();
+    renderPdfAnnotationList();
+    setPdfStatus('');
+  }
+
+  function renderImagePage() {
+    if (!attachmentImage || !pdfOverlay || !pdfState.selectedAttachment) return;
+    if (!attachmentImage.naturalWidth || !attachmentImage.naturalHeight) return;
+    pdfState.viewKind = 'image';
+    pdfState.pdfDoc = null;
+    pdfState.page = 1;
+    if (pdfCanvas) pdfCanvas.hidden = true;
+    if (attachmentHtml) attachmentHtml.hidden = true;
+    attachmentImage.hidden = false;
+    const cssWidth = Math.max(1, Math.floor(attachmentImage.naturalWidth * pdfState.scale));
+    const cssHeight = Math.max(1, Math.floor(attachmentImage.naturalHeight * pdfState.scale));
+    attachmentImage.style.width = `${cssWidth}px`;
+    attachmentImage.style.height = `${cssHeight}px`;
+    pdfOverlay.style.width = attachmentImage.style.width;
+    pdfOverlay.style.height = attachmentImage.style.height;
+    if (pdfPageLabel) pdfPageLabel.textContent = isZh ? '图片' : 'Image';
+    if (pdfPrevButton) pdfPrevButton.disabled = true;
+    if (pdfNextButton) pdfNextButton.disabled = true;
+    renderPdfMarks();
+    renderPdfAnnotationList();
+    setPdfStatus('');
+  }
+
+  function htmlPreviewDocument(rawHtml = '') {
+    const baseStyle = `
+      <style>
+        html, body { margin: 0; padding: 16px; background: #fff; color: #212529; font-family: Arial, sans-serif; }
+        img, video, canvas, svg, table { max-width: 100%; }
+        pre { white-space: pre-wrap; }
+      </style>
+    `;
+    return rawHtml.includes('</head>')
+      ? rawHtml.replace('</head>', `${baseStyle}</head>`)
+      : `${baseStyle}${rawHtml}`;
+  }
+
+  function renderHtmlPage() {
+    if (!attachmentHtml || !pdfOverlay || !pdfState.selectedAttachment) return;
+    pdfState.viewKind = 'html';
+    pdfState.pdfDoc = null;
+    pdfState.page = 1;
+    if (pdfCanvas) pdfCanvas.hidden = true;
+    if (attachmentImage) attachmentImage.hidden = true;
+    attachmentHtml.hidden = false;
+    const cssWidth = Math.floor(980 * pdfState.scale);
+    attachmentHtml.style.width = `${cssWidth}px`;
+    const doc = attachmentHtml.contentDocument;
+    const height = Math.max(
+      640,
+      doc?.documentElement?.scrollHeight || 0,
+      doc?.body?.scrollHeight || 0,
+    );
+    attachmentHtml.style.height = `${height}px`;
+    pdfOverlay.style.width = attachmentHtml.style.width;
+    pdfOverlay.style.height = attachmentHtml.style.height;
+    if (pdfPageLabel) pdfPageLabel.textContent = 'HTML';
+    if (pdfPrevButton) pdfPrevButton.disabled = true;
+    if (pdfNextButton) pdfNextButton.disabled = true;
+    renderPdfMarks();
+    renderPdfAnnotationList();
+    setPdfStatus('');
+  }
+
+  async function loadImageAttachment(attachment) {
+    if (!attachment?.preview_url || !attachmentImage) return;
+    if (pdfState.viewKind !== 'image') pdfState.scale = 1;
+    pdfState.selectedAttachment = attachment;
+    pdfState.page = 1;
+    pdfState.pdfDoc = null;
+    renderAttachmentButtons();
+    setPdfStatus(isZh ? '加载图片...' : 'Loading image...');
+    await new Promise((resolve, reject) => {
+      attachmentImage.onload = () => {
+        renderImagePage();
+        resolve();
+      };
+      attachmentImage.onerror = () => reject(new Error(isZh ? '图片加载失败。' : 'Could not load image.'));
+      attachmentImage.src = attachment.preview_url;
+    });
+  }
+
+  async function loadHtmlAttachment(attachment) {
+    if (!attachment?.preview_url || !attachmentHtml) return;
+    if (pdfState.viewKind !== 'html') pdfState.scale = 1;
+    pdfState.selectedAttachment = attachment;
+    pdfState.page = 1;
+    pdfState.pdfDoc = null;
+    renderAttachmentButtons();
+    setPdfStatus(isZh ? '加载 HTML 快照...' : 'Loading HTML snapshot...');
+    const response = await fetch(attachment.preview_url, { credentials: 'same-origin' });
+    if (!response.ok) throw new Error(isZh ? 'HTML 快照加载失败。' : 'Could not load HTML snapshot.');
+    const rawHtml = await response.text();
+    await new Promise((resolve) => {
+      attachmentHtml.onload = () => {
+        renderHtmlPage();
+        setTimeout(renderHtmlPage, 250);
+        resolve();
+      };
+      attachmentHtml.srcdoc = htmlPreviewDocument(rawHtml);
+    });
+  }
+
+  async function loadPreviewAttachment(attachment) {
+    if (!attachment) return;
+    if (!attachment.annotatable) {
+      if (attachment.file_url) window.open(attachment.file_url, '_blank', 'noopener');
+      return;
+    }
+    if (attachment.kind === 'image' || attachment.is_image) {
+      await loadImageAttachment(attachment);
+      return;
+    }
+    if (attachment.kind === 'html') {
+      await loadHtmlAttachment(attachment);
+      return;
+    }
+    if (!attachment.preview_url && !attachment.pdf_url) return;
+    pdfState.selectedAttachment = attachment;
+    if (pdfState.viewKind !== 'pdf') pdfState.scale = 1.25;
+    pdfState.page = 1;
+    renderAttachmentButtons();
+    setPdfStatus(isZh ? '加载 PDF...' : 'Loading PDF...');
+    if (attachmentImage) attachmentImage.hidden = true;
+    if (attachmentHtml) attachmentHtml.hidden = true;
+    if (pdfCanvas) pdfCanvas.hidden = false;
+    const pdfjs = await loadPdfJs();
+    pdfState.pdfDoc = await pdfjs.getDocument({ url: attachment.preview_url || attachment.pdf_url, withCredentials: true }).promise;
+    await renderPdfPage();
+  }
+
+  function renderCurrentPreview() {
+    if (pdfState.viewKind === 'image') {
+      renderImagePage();
+      return;
+    }
+    if (pdfState.viewKind === 'html') {
+      renderHtmlPage();
+      return;
+    }
+    renderPdfPage().catch((error) => setPdfStatus(error.message || 'Could not render page.'));
+  }
+
+  async function openPdfWorkspace(item) {
+    if (!pdfDialog || !item) return;
+    pdfState = {
+      ...pdfState,
+      item,
+      attachments: [],
+      annotations: annotationsFor(item.key),
+      selectedAttachment: null,
+      pdfDoc: null,
+      viewKind: '',
+      page: 1,
+      scale: 1,
+      drawing: null,
+    };
+    if (pdfTitle) pdfTitle.textContent = item.title || item.key;
+    renderAttachmentButtons();
+    renderPdfAnnotationList();
+    setPdfStatus(isZh ? '读取 Zotero 附件...' : 'Loading Zotero attachments...');
+    if (typeof pdfDialog.showModal === 'function') pdfDialog.showModal();
+    else pdfDialog.setAttribute('open', '');
+    try {
+      const params = new URLSearchParams({ action: 'attachments', paper_key: item.key });
+      const data = await request({}, `?${params}`);
+      pdfState.attachments = data.attachments || [];
+      pdfState.annotations = data.annotations || [];
+      state.annotations[item.key] = pdfState.annotations;
+      const firstPreview = pdfState.attachments.find((attachment) => attachment.annotatable && attachment.available);
+      renderAttachmentButtons();
+      if (firstPreview) {
+        await loadPreviewAttachment(firstPreview);
+      } else {
+        setPdfStatus(isZh ? '没有可标注的 PDF 或图片。其他附件可从左侧打开或下载。' : 'No annotatable PDF or image. Other attachments can be opened or downloaded from the left.');
+      }
+      render();
+    } catch (error) {
+      setPdfStatus(error.message || (isZh ? '无法打开 PDF 工作区。' : 'Could not open PDF workspace.'));
+    }
+  }
+
+  function pointFromEvent(event) {
+    const rect = pdfOverlay.getBoundingClientRect();
+    return {
+      x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
+    };
+  }
+
+  function removeDraftMark() {
+    pdfOverlay?.querySelector('[data-literature-pdf-draft]')?.remove();
+  }
+
+  function renderDraftMark(start, end) {
+    if (!pdfOverlay) return;
+    removeDraftMark();
+    const left = Math.min(start.x, end.x);
+    const top = Math.min(start.y, end.y);
+    const width = Math.abs(end.x - start.x);
+    const height = Math.abs(end.y - start.y);
+    const draft = document.createElement('div');
+    draft.className = `literature-pdf-mark is-${pdfState.tool} is-draft`;
+    draft.dataset.literaturePdfDraft = 'true';
+    draft.style.left = `${left * 100}%`;
+    draft.style.top = `${top * 100}%`;
+    draft.style.width = `${width * 100}%`;
+    draft.style.height = `${height * 100}%`;
+    pdfOverlay.append(draft);
+  }
+
+  async function savePdfAnnotation(rect) {
+    const payload = {
+      action: 'annotation',
+      paperKey: pdfState.item.key,
+      attachmentKey: pdfState.selectedAttachment.key,
+      tool: pdfState.tool,
+      page: pdfState.page,
+      rect,
+      color: pdfState.tool === 'highlight' ? '#ffe066' : '#29aeb9',
+      quote: pdfQuoteInput?.value || '',
+      note: pdfNoteInput?.value || '',
+    };
+    const data = await request({ method: 'POST', body: JSON.stringify(payload) });
+    const annotation = data.annotation;
+    pdfState.annotations = [annotation, ...pdfState.annotations.filter((item) => item.id !== annotation.id)];
+    state.annotations[annotation.paperKey] = pdfState.annotations;
+    if (pdfNoteInput) pdfNoteInput.value = '';
+    if (pdfQuoteInput) pdfQuoteInput.value = '';
+    renderPdfMarks();
+    renderPdfAnnotationList();
+    renderItems();
   }
 
   function render() {
@@ -408,6 +871,7 @@
       state.tags = data.tags || [];
       state.cards = data.cards || {};
       state.evidence = data.evidence || {};
+      state.annotations = data.annotations || {};
       if (setupBox) setupBox.hidden = state.configured;
       if (configPath && data.setup?.config_path) configPath.textContent = data.setup.config_path;
       renderConfigStatus();
@@ -497,15 +961,128 @@
   });
 
   detail.addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-literature-copy-evidence]');
+    const pdfButton = event.target.closest('[data-literature-open-pdf]');
+    if (pdfButton) {
+      const item = state.items.find((candidate) => candidate.key === pdfButton.dataset.literatureOpenPdf);
+      openPdfWorkspace(item);
+      return;
+    }
+    const button = event.target.closest('[data-literature-copy-evidence-markdown], [data-literature-copy-evidence]');
     if (!button) return;
-    const value = button.dataset.literatureCopyEvidence || '';
+    const value = button.dataset.literatureCopyEvidenceMarkdown || button.dataset.literatureCopyEvidence || '';
     try {
       await navigator.clipboard?.writeText(value);
       button.textContent = isZh ? '已复制' : 'Copied';
       setTimeout(render, 900);
     } catch {
       window.prompt(isZh ? '复制这段引用' : 'Copy this reference', value);
+    }
+  });
+
+  root.querySelectorAll('[data-literature-pdf-close]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (typeof pdfDialog?.close === 'function') pdfDialog.close();
+      else pdfDialog?.removeAttribute('open');
+    });
+  });
+
+  pdfAttachments?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-literature-pdf-attachment]');
+    if (!button) return;
+    const attachment = pdfState.attachments.find((candidate) => candidate.key === button.dataset.literaturePdfAttachment);
+    loadPreviewAttachment(attachment).catch((error) => setPdfStatus(error.message || 'Could not load attachment.'));
+  });
+
+  pdfToolButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      pdfState.tool = button.dataset.literaturePdfTool || 'highlight';
+      pdfToolButtons.forEach((candidate) => candidate.classList.toggle('active', candidate === button));
+    });
+  });
+
+  pdfPrevButton?.addEventListener('click', () => {
+    if (!pdfState.pdfDoc || pdfState.page <= 1) return;
+    pdfState.page -= 1;
+    renderPdfPage().catch((error) => setPdfStatus(error.message || 'Could not render page.'));
+  });
+
+  pdfNextButton?.addEventListener('click', () => {
+    if (!pdfState.pdfDoc || pdfState.page >= pdfState.pdfDoc.numPages) return;
+    pdfState.page += 1;
+    renderPdfPage().catch((error) => setPdfStatus(error.message || 'Could not render page.'));
+  });
+
+  pdfZoomInButton?.addEventListener('click', () => {
+    pdfState.scale = Math.min(2.5, pdfState.scale + 0.15);
+    renderCurrentPreview();
+  });
+
+  pdfZoomOutButton?.addEventListener('click', () => {
+    pdfState.scale = Math.max(0.75, pdfState.scale - 0.15);
+    renderCurrentPreview();
+  });
+
+  pdfOverlay?.addEventListener('pointerdown', (event) => {
+    if (!pdfState.selectedAttachment?.annotatable) return;
+    if (event.button !== 0) return;
+    pdfOverlay.setPointerCapture(event.pointerId);
+    pdfState.drawing = { start: pointFromEvent(event), end: pointFromEvent(event) };
+    renderDraftMark(pdfState.drawing.start, pdfState.drawing.end);
+  });
+
+  pdfOverlay?.addEventListener('pointermove', (event) => {
+    if (!pdfState.drawing) return;
+    pdfState.drawing.end = pointFromEvent(event);
+    renderDraftMark(pdfState.drawing.start, pdfState.drawing.end);
+  });
+
+  pdfOverlay?.addEventListener('pointerup', async (event) => {
+    if (!pdfState.drawing) return;
+    pdfState.drawing.end = pointFromEvent(event);
+    const { start, end } = pdfState.drawing;
+    pdfState.drawing = null;
+    removeDraftMark();
+    const rect = {
+      x: Math.min(start.x, end.x),
+      y: Math.min(start.y, end.y),
+      width: Math.abs(end.x - start.x),
+      height: Math.abs(end.y - start.y),
+    };
+    if (rect.width < 0.005 || rect.height < 0.005) return;
+    try {
+      await savePdfAnnotation(rect);
+    } catch (error) {
+      setPdfStatus(error.message || (isZh ? '保存标注失败。' : 'Could not save annotation.'));
+    }
+  });
+
+  pdfAnnotationList?.addEventListener('click', async (event) => {
+    const copy = event.target.closest('[data-literature-copy-annotation]');
+    if (copy) {
+      const value = copy.dataset.literatureCopyAnnotation || '';
+      try {
+        await navigator.clipboard?.writeText(value);
+        copy.textContent = isZh ? '已复制' : 'Copied';
+        setTimeout(renderPdfAnnotationList, 900);
+      } catch {
+        window.prompt(isZh ? '复制这段引用' : 'Copy this reference', value);
+      }
+      return;
+    }
+    const del = event.target.closest('[data-literature-delete-annotation]');
+    if (!del || !pdfState.item) return;
+    const annotationId = del.dataset.literatureDeleteAnnotation || '';
+    try {
+      await request({
+        method: 'DELETE',
+      }, `?action=annotation&paper_key=${encodeURIComponent(pdfState.item.key)}&id=${encodeURIComponent(annotationId)}`);
+      pdfState.annotations = pdfState.annotations.filter((annotation) => annotation.id !== annotationId);
+      state.annotations[pdfState.item.key] = pdfState.annotations;
+      renderPdfMarks();
+      renderPdfAnnotationList();
+      renderItems();
+    } catch (error) {
+      setPdfStatus(error.message || (isZh ? '删除标注失败。' : 'Could not delete annotation.'));
     }
   });
 

@@ -1,8 +1,9 @@
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const VALID_STATUSES = new Set(['unread', 'reading', 'read', 'important']);
 const VALID_EVIDENCE_TYPES = new Set(['quote', 'figure', 'finding', 'protocol']);
+const VALID_ANNOTATION_TOOLS = new Set(['highlight', 'box', 'ellipse']);
 
 function uniqueNumbers(values = []) {
   return [...new Set(values.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))];
@@ -21,6 +22,12 @@ function cleanTags(values = []) {
   return [...new Set(values.map((value) => safeKey(String(value).replace(/^#/, '').toLowerCase())).filter(Boolean))];
 }
 
+function clampUnit(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(1, Math.max(0, number));
+}
+
 function evidencePrefix(type) {
   return ({
     figure: 'fig',
@@ -28,6 +35,68 @@ function evidencePrefix(type) {
     protocol: 'protocol',
     quote: 'quote',
   })[type] || 'quote';
+}
+
+export function normalizeAttachmentKind(contentType = '', filename = '') {
+  const type = String(contentType || '').toLowerCase();
+  const name = String(filename || '').toLowerCase();
+  if (type.includes('pdf') || name.endsWith('.pdf')) return 'pdf';
+  if (
+    type.startsWith('image/png')
+    || type.startsWith('image/jpeg')
+    || type.startsWith('image/jpg')
+    || type.startsWith('image/gif')
+    || type.startsWith('image/webp')
+    || type.startsWith('image/bmp')
+    || /\.(png|jpe?g|gif|webp|bmp)$/.test(name)
+  ) {
+    return 'image';
+  }
+  if (type.includes('html') || /\.(html?|xhtml)$/.test(name)) return 'html';
+  return 'other';
+}
+
+export function isAnnotatableAttachmentKind(kind = '') {
+  return ['pdf', 'image', 'html'].includes(String(kind || '').toLowerCase());
+}
+
+function authorSummary(creators = []) {
+  const names = Array.isArray(creators) ? creators.filter(Boolean) : [];
+  if (!names.length) return '';
+  return names.length === 1 ? names[0] : `${names[0]} et al.`;
+}
+
+function quoteBlock(value = '') {
+  return cleanText(value, 20000)
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join('\n');
+}
+
+export function formatEvidenceMarkdown(evidence = {}, paper = {}) {
+  const blocks = [];
+  const quote = quoteBlock(evidence.original_text);
+  if (quote.trim()) blocks.push(quote);
+
+  const metadata = [];
+  const reference = cleanText(evidence.reference || '');
+  if (reference) metadata.push(`Evidence: ${reference}`);
+
+  const source = [
+    cleanText(paper.title || ''),
+    authorSummary(paper.creators),
+    cleanText(paper.year || ''),
+    cleanText(evidence.section || ''),
+    evidence.page ? `p.${cleanText(evidence.page, 80)}` : '',
+    paper.doi ? `DOI:${cleanText(paper.doi, 255)}` : '',
+  ].filter(Boolean).join(' · ');
+  if (source) metadata.push(`Source: ${source}`);
+
+  const note = cleanText(evidence.my_note || '');
+  if (note) metadata.push(`Note: ${note}`);
+  if (metadata.length) blocks.push(metadata.join('\n'));
+
+  return blocks.join('\n\n');
 }
 
 export function normalizeZoteroItem(item = {}) {
@@ -57,6 +126,21 @@ export function normalizeZoteroItem(item = {}) {
     dateModified: data.dateModified || '',
     zoteroUrl: item.links?.alternate?.href || '',
   };
+}
+
+export function tagsFromVisibleItems(items = []) {
+  const seen = new Set();
+  const tags = [];
+  for (const item of items) {
+    for (const tag of Array.isArray(item.tags) ? item.tags : []) {
+      const value = String(tag?.tag || tag || '').trim();
+      const key = value.toLowerCase();
+      if (!value || seen.has(key)) continue;
+      seen.add(key);
+      tags.push({ tag: value });
+    }
+  }
+  return tags;
 }
 
 export function normalizeLiteratureCard(input = {}, { now = () => new Date() } = {}) {
@@ -112,6 +196,36 @@ export function normalizeLiteratureEvidence(input = {}, { now = () => new Date()
     created_at: createdAt,
     modified_at: input.modified_at || now().toISOString(),
     reference: `[[Evidence:${paperKey}#${id}]]`,
+  };
+}
+
+export function normalizeLiteratureAnnotation(input = {}, { now = () => new Date() } = {}) {
+  const paperKey = safeKey(input.paperKey || input.paper_key);
+  if (!paperKey) throw new Error('paperKey is required');
+  const attachmentKey = safeKey(input.attachmentKey || input.attachment_key);
+  if (!attachmentKey) throw new Error('attachmentKey is required');
+  const tool = VALID_ANNOTATION_TOOLS.has(input.tool) ? input.tool : 'highlight';
+  const createdAt = input.created_at || now().toISOString();
+  const id = safeKey(input.id) || `ann-${createdAt.replace(/[^0-9]/g, '').slice(0, 14)}`;
+  const rect = input.rect || {};
+  return {
+    id,
+    paperKey,
+    attachmentKey,
+    tool,
+    page: Math.max(1, Number.parseInt(input.page, 10) || 1),
+    rect: {
+      x: clampUnit(rect.x),
+      y: clampUnit(rect.y),
+      width: clampUnit(rect.width),
+      height: clampUnit(rect.height),
+    },
+    color: cleanText(input.color || '#29aeb9', 32),
+    quote: cleanText(input.quote, 20000),
+    note: cleanText(input.note, 12000),
+    created_at: createdAt,
+    modified_at: input.modified_at || now().toISOString(),
+    reference: `[[PaperAnnotation:${paperKey}#${id}]]`,
   };
 }
 
@@ -251,6 +365,63 @@ export class LiteratureEvidenceStore {
       return cards.sort((a, b) => b.modified_at.localeCompare(a.modified_at));
     } catch (error) {
       if (error.code === 'ENOENT') return [];
+      throw error;
+    }
+  }
+}
+
+export class LiteratureAnnotationStore {
+  constructor(rootDir, { now = () => new Date() } = {}) {
+    this.rootDir = rootDir;
+    this.now = now;
+  }
+
+  literatureDir() {
+    return path.join(this.rootDir, 'Literature');
+  }
+
+  annotationsDir(paperKey = '') {
+    return paperKey
+      ? path.join(this.literatureDir(), 'annotations', safeKey(paperKey))
+      : path.join(this.literatureDir(), 'annotations');
+  }
+
+  annotationPath(paperKey, id) {
+    return path.join(this.annotationsDir(paperKey), `${safeKey(id)}.json`);
+  }
+
+  async save(input) {
+    const annotation = normalizeLiteratureAnnotation({
+      ...input,
+      modified_at: this.now().toISOString(),
+      created_at: input.created_at || this.now().toISOString(),
+    }, { now: this.now });
+    await mkdir(this.annotationsDir(annotation.paperKey), { recursive: true });
+    await writeFile(this.annotationPath(annotation.paperKey, annotation.id), `${JSON.stringify(annotation, null, 2)}\n`);
+    return annotation;
+  }
+
+  async list(paperKey) {
+    try {
+      const dir = this.annotationsDir(paperKey);
+      const files = await readdir(dir);
+      const annotations = await Promise.all(files.filter((file) => file.endsWith('.json')).map(async (file) => {
+        const raw = await readFile(path.join(dir, file), 'utf8');
+        return normalizeLiteratureAnnotation(JSON.parse(raw), { now: this.now });
+      }));
+      return annotations.sort((a, b) => b.modified_at.localeCompare(a.modified_at));
+    } catch (error) {
+      if (error.code === 'ENOENT') return [];
+      throw error;
+    }
+  }
+
+  async delete(paperKey, id) {
+    try {
+      await unlink(this.annotationPath(paperKey, id));
+      return true;
+    } catch (error) {
+      if (error.code === 'ENOENT') return false;
       throw error;
     }
   }

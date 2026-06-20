@@ -14,6 +14,7 @@ $Response = new Response();
 
 const LITERATURE_ROOT = '/elabftw/silverbullet-space';
 const ZOTERO_API_BASE = 'https://api.zotero.org';
+const ZOTERO_WEBDAV_DIR = '/elabftw/zotero-webdav';
 
 function literatureJson(Response $Response, mixed $payload, int $status = 200): Response
 {
@@ -86,9 +87,19 @@ function literatureEvidenceRootDir(): string
     return literatureDataDir() . '/evidence';
 }
 
+function literatureAnnotationRootDir(): string
+{
+    return literatureDataDir() . '/annotations';
+}
+
 function literatureEvidenceDir(string $paperKey): string
 {
     return literatureEvidenceRootDir() . '/' . literatureSafeKey($paperKey);
+}
+
+function literatureAnnotationDir(string $paperKey): string
+{
+    return literatureAnnotationRootDir() . '/' . literatureSafeKey($paperKey);
 }
 
 function literatureEnsureCardsDir(): void
@@ -118,6 +129,15 @@ function literatureEnsureEvidenceDir(string $paperKey): void
     }
 }
 
+function literatureEnsureAnnotationDir(string $paperKey): void
+{
+    literatureEnsureDataDir();
+    $dir = literatureAnnotationDir($paperKey);
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new Exception('Could not create literature annotation directory');
+    }
+}
+
 function literatureCardPath(string $itemKey): string
 {
     return literatureCardsDir() . '/' . literatureSafeKey($itemKey) . '.json';
@@ -131,6 +151,11 @@ function literaturePaperPath(string $paperKey): string
 function literatureEvidencePath(string $paperKey, string $evidenceId): string
 {
     return literatureEvidenceDir($paperKey) . '/' . literatureSafeKey($evidenceId) . '.json';
+}
+
+function literatureAnnotationPath(string $paperKey, string $annotationId): string
+{
+    return literatureAnnotationDir($paperKey) . '/' . literatureSafeKey($annotationId) . '.json';
 }
 
 function literatureCleanTags(mixed $values): array
@@ -156,6 +181,15 @@ function literatureEvidencePrefix(string $type): string
         'protocol' => 'protocol',
         default => 'quote',
     };
+}
+
+function literatureClampUnit(mixed $value): float
+{
+    $number = (float) $value;
+    if (!is_finite($number)) {
+        return 0.0;
+    }
+    return min(1.0, max(0.0, $number));
 }
 
 function literatureNow(): string
@@ -303,6 +337,44 @@ function literatureNormalizeEvidence(array $body): array
     );
 }
 
+function literatureNormalizeAnnotation(array $body): array
+{
+    $paperKey = literatureSafeKey($body['paperKey'] ?? $body['paper_key'] ?? '');
+    if ($paperKey === '') {
+        throw new Exception('paperKey is required');
+    }
+    $attachmentKey = literatureSafeKey($body['attachmentKey'] ?? $body['attachment_key'] ?? '');
+    if ($attachmentKey === '') {
+        throw new Exception('attachmentKey is required');
+    }
+    $tool = (string) ($body['tool'] ?? 'highlight');
+    if (!in_array($tool, array('highlight', 'box', 'ellipse'), true)) {
+        $tool = 'highlight';
+    }
+    $createdAt = (string) ($body['created_at'] ?? literatureNow());
+    $id = literatureSafeKey($body['id'] ?? '') ?: 'ann-' . substr(preg_replace('/[^0-9]/', '', $createdAt) ?: date('YmdHis'), 0, 14);
+    $rect = is_array($body['rect'] ?? null) ? $body['rect'] : array();
+    return array(
+        'id' => $id,
+        'paperKey' => $paperKey,
+        'attachmentKey' => $attachmentKey,
+        'tool' => $tool,
+        'page' => max(1, (int) ($body['page'] ?? 1)),
+        'rect' => array(
+            'x' => literatureClampUnit($rect['x'] ?? 0),
+            'y' => literatureClampUnit($rect['y'] ?? 0),
+            'width' => literatureClampUnit($rect['width'] ?? 0),
+            'height' => literatureClampUnit($rect['height'] ?? 0),
+        ),
+        'color' => literatureCleanText($body['color'] ?? '#29aeb9', 32),
+        'quote' => literatureCleanText($body['quote'] ?? '', 20000),
+        'note' => literatureCleanText($body['note'] ?? '', 12000),
+        'created_at' => $createdAt,
+        'modified_at' => (string) ($body['modified_at'] ?? literatureNow()),
+        'reference' => "[[PaperAnnotation:{$paperKey}#{$id}]]",
+    );
+}
+
 function literatureListEvidence(string $paperKey): array
 {
     $evidence = array();
@@ -331,6 +403,36 @@ function literatureWriteEvidence(array $body): array
 function literatureDeleteEvidence(string $paperKey, string $evidenceId): void
 {
     $path = literatureEvidencePath($paperKey, $evidenceId);
+    if (is_file($path)) {
+        unlink($path);
+    }
+}
+
+function literatureListAnnotations(string $paperKey): array
+{
+    $annotations = array();
+    foreach (glob(literatureAnnotationDir($paperKey) . '/*.json') ?: array() as $file) {
+        $annotations[] = literatureNormalizeAnnotation(json_decode(file_get_contents($file) ?: '{}', true, 512, JSON_THROW_ON_ERROR));
+    }
+    usort($annotations, fn (array $a, array $b): int => strcmp($b['modified_at'], $a['modified_at']));
+    return $annotations;
+}
+
+function literatureWriteAnnotation(array $body): array
+{
+    $paperKey = literatureSafeKey($body['paperKey'] ?? $body['paper_key'] ?? '');
+    literatureEnsureAnnotationDir($paperKey);
+    $annotation = literatureNormalizeAnnotation(array_merge($body, array(
+        'created_at' => $body['created_at'] ?? literatureNow(),
+        'modified_at' => literatureNow(),
+    )));
+    file_put_contents(literatureAnnotationPath($annotation['paperKey'], $annotation['id']), json_encode($annotation, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n", LOCK_EX);
+    return $annotation;
+}
+
+function literatureDeleteAnnotation(string $paperKey, string $annotationId): void
+{
+    $path = literatureAnnotationPath($paperKey, $annotationId);
     if (is_file($path)) {
         unlink($path);
     }
@@ -446,6 +548,149 @@ function literatureZoteroRequest(array $config, string $path, array $query = arr
     return json_decode((string) $raw, true, 512, JSON_THROW_ON_ERROR) ?: array();
 }
 
+function literatureNormalizeAttachment(array $item): array
+{
+    $data = $item['data'] ?? $item;
+    $key = literatureSafeKey($data['key'] ?? $item['key'] ?? '');
+    $filename = (string) ($data['filename'] ?? $data['title'] ?? 'Attachment');
+    $contentType = (string) ($data['contentType'] ?? '');
+    $kind = literatureAttachmentKind($contentType, $filename);
+    $zipPath = ZOTERO_WEBDAV_DIR . '/' . $key . '.zip';
+    $fileUrl = $key !== '' ? '/literature-api.php?action=attachment&attachment_key=' . rawurlencode($key) : '';
+    return array(
+        'key' => $key,
+        'title' => (string) ($data['title'] ?? $filename),
+        'filename' => $filename,
+        'contentType' => $contentType,
+        'linkMode' => (string) ($data['linkMode'] ?? ''),
+        'parentItemKey' => literatureSafeKey($data['parentItem'] ?? ''),
+        'kind' => $kind,
+        'is_pdf' => $kind === 'pdf',
+        'is_image' => $kind === 'image',
+        'annotatable' => in_array($kind, array('pdf', 'image', 'html'), true),
+        'available' => $key !== '' && is_file($zipPath),
+        'file_url' => $fileUrl,
+        'preview_url' => in_array($kind, array('pdf', 'image', 'html'), true) ? $fileUrl : '',
+        'pdf_url' => $kind === 'pdf' ? $fileUrl : '',
+        'image_url' => $kind === 'image' ? $fileUrl : '',
+    );
+}
+
+function literatureAttachmentKind(string $contentType, string $filename): string
+{
+    $type = strtolower($contentType);
+    $name = strtolower($filename);
+    if (str_contains($type, 'pdf') || str_ends_with($name, '.pdf')) {
+        return 'pdf';
+    }
+    if (
+        str_starts_with($type, 'image/png')
+        || str_starts_with($type, 'image/jpeg')
+        || str_starts_with($type, 'image/jpg')
+        || str_starts_with($type, 'image/gif')
+        || str_starts_with($type, 'image/webp')
+        || str_starts_with($type, 'image/bmp')
+        || preg_match('/\.(png|jpe?g|gif|webp|bmp)$/', $name) === 1
+    ) {
+        return 'image';
+    }
+    if (str_contains($type, 'html') || preg_match('/\.(html?|xhtml)$/', $name) === 1) {
+        return 'html';
+    }
+    return 'other';
+}
+
+function literatureListAttachments(array $config, string $paperKey): array
+{
+    $paperKey = literatureSafeKey($paperKey);
+    if ($paperKey === '') {
+        return array();
+    }
+    $prefix = literaturePrefix($config);
+    $children = literatureZoteroRequest($config, "{$prefix}/items/{$paperKey}/children", array(
+        'format' => 'json',
+        'include' => 'data',
+        'limit' => 100,
+    ));
+    $attachments = array();
+    foreach ($children as $child) {
+        $data = $child['data'] ?? $child;
+        if (($data['itemType'] ?? '') !== 'attachment') {
+            continue;
+        }
+        $attachments[] = literatureNormalizeAttachment($child);
+    }
+    return $attachments;
+}
+
+function literatureContentTypeForFile(string $filename): string
+{
+    return match (strtolower(pathinfo($filename, PATHINFO_EXTENSION))) {
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'bmp' => 'image/bmp',
+        default => 'application/octet-stream',
+    };
+}
+
+function literatureReadAttachmentArchive(string $attachmentKey, array $extensions = array()): array
+{
+    $attachmentKey = literatureSafeKey($attachmentKey);
+    if ($attachmentKey === '') {
+        throw new Exception('attachmentKey is required');
+    }
+    $zipPath = ZOTERO_WEBDAV_DIR . '/' . $attachmentKey . '.zip';
+    if (!is_file($zipPath)) {
+        throw new Exception('Attachment is not available in WebDAV yet');
+    }
+    $zip = new \ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        throw new Exception('Could not open Zotero attachment archive');
+    }
+    $fileName = '';
+    $normalizedExtensions = array_map(fn (string $ext): string => strtolower(ltrim($ext, '.')), $extensions);
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = (string) $zip->getNameIndex($i);
+        if (str_ends_with($name, '/')) {
+            continue;
+        }
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (!$normalizedExtensions || in_array($ext, $normalizedExtensions, true)) {
+            $fileName = $name;
+            break;
+        }
+    }
+    if ($fileName === '') {
+        $zip->close();
+        throw new Exception('No supported file found in Zotero attachment archive');
+    }
+    $content = $zip->getFromName($fileName);
+    $zip->close();
+    if ($content === false) {
+        throw new Exception('Could not read file from Zotero attachment archive');
+    }
+    return array(
+        'name' => $fileName,
+        'content' => $content,
+        'contentType' => literatureContentTypeForFile($fileName),
+    );
+}
+
+function literatureAttachmentResponse(Response $Response, string $attachmentKey, array $extensions = array()): Response
+{
+    $file = literatureReadAttachmentArchive($attachmentKey, $extensions);
+    $inline = str_starts_with($file['contentType'], 'image/') || $file['contentType'] === 'application/pdf';
+    $Response->setStatusCode(200);
+    $Response->headers->set('Content-Type', $file['contentType']);
+    $Response->headers->set('Content-Disposition', ($inline ? 'inline' : 'attachment') . '; filename="' . addcslashes(basename($file['name']), '"\\') . '"');
+    $Response->headers->set('Cache-Control', 'private, max-age=300');
+    $Response->setContent($file['content']);
+    return $Response;
+}
+
 function literatureCreatorName(array $creator): string
 {
     if (!empty($creator['name'])) {
@@ -490,6 +735,36 @@ function literatureEvidenceMapForItems(array $items): array
     return $map;
 }
 
+function literatureAnnotationMapForItems(array $items): array
+{
+    $map = array();
+    foreach ($items as $item) {
+        $key = literatureSafeKey($item['key'] ?? '');
+        if ($key !== '') {
+            $map[$key] = literatureListAnnotations($key);
+        }
+    }
+    return $map;
+}
+
+function literatureTagsFromItems(array $items): array
+{
+    $seen = array();
+    $tags = array();
+    foreach ($items as $item) {
+        foreach (is_array($item['tags'] ?? null) ? $item['tags'] : array() as $tag) {
+            $value = trim(is_array($tag) ? (string) ($tag['tag'] ?? '') : (string) $tag);
+            $key = mb_strtolower($value);
+            if ($value === '' || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $tags[] = array('tag' => $value);
+        }
+    }
+    return $tags;
+}
+
 try {
     $Response->prepare($Request);
     $method = $Request->getMethod();
@@ -498,6 +773,19 @@ try {
     if ($method === 'GET') {
         if ((string) $Request->query->get('action') === 'config') {
             literatureJson($Response, array('config' => literaturePublicConfig($config)));
+        } elseif ((string) $Request->query->get('action') === 'attachments') {
+            $paperKey = literatureSafeKey($Request->query->get('paper_key') ?? $Request->query->get('paperKey'));
+            literatureJson($Response, array(
+                'attachments' => literatureListAttachments($config, $paperKey),
+                'annotations' => literatureListAnnotations($paperKey),
+            ));
+        } elseif ((string) $Request->query->get('action') === 'annotations') {
+            $paperKey = literatureSafeKey($Request->query->get('paper_key') ?? $Request->query->get('paperKey'));
+            literatureJson($Response, array('annotations' => literatureListAnnotations($paperKey)));
+        } elseif ((string) $Request->query->get('action') === 'attachment') {
+            literatureAttachmentResponse($Response, (string) ($Request->query->get('attachment_key') ?? $Request->query->get('attachmentKey')));
+        } elseif ((string) $Request->query->get('action') === 'pdf') {
+            literatureAttachmentResponse($Response, (string) ($Request->query->get('attachment_key') ?? $Request->query->get('attachmentKey')), array('pdf'));
         } elseif ((string) $Request->query->get('action') === 'evidence') {
             $paperKey = literatureSafeKey($Request->query->get('paper_key') ?? $Request->query->get('paperKey'));
             literatureJson($Response, array('evidence' => literatureListEvidence($paperKey)));
@@ -524,6 +812,7 @@ try {
                 'tags' => array(),
                 'cards' => $cardMap,
                 'evidence' => literatureEvidenceMapForItems($localPapers),
+                'annotations' => literatureAnnotationMapForItems($localPapers),
             ));
         } else {
             $prefix = literaturePrefix($config);
@@ -546,16 +835,16 @@ try {
                 }
             }
             $collections = literatureZoteroRequest($config, "{$prefix}/collections", array('format' => 'json', 'limit' => 100));
-            $tags = literatureZoteroRequest($config, "{$prefix}/tags", array('format' => 'json', 'limit' => 100));
             literatureJson($Response, array(
                 'configured' => true,
                 'config' => literaturePublicConfig($config),
                 'library' => array('id' => $config['library_id'], 'type' => $config['library_type']),
                 'items' => $items,
                 'collections' => $collections,
-                'tags' => $tags,
+                'tags' => literatureTagsFromItems($items),
                 'cards' => $cardMap,
                 'evidence' => literatureEvidenceMapForItems($items),
+                'annotations' => literatureAnnotationMapForItems($items),
             ));
         }
         }
@@ -567,6 +856,11 @@ try {
             literatureJson($Response, array('paper' => literatureWritePaper($body)), $method === 'POST' ? 201 : 200);
         } elseif (($body['action'] ?? '') === 'evidence') {
             literatureJson($Response, array('evidence' => literatureWriteEvidence($body)), $method === 'POST' ? 201 : 200);
+        } elseif (($body['action'] ?? '') === 'annotation') {
+            literatureJson($Response, array('annotation' => literatureWriteAnnotation($body)), $method === 'POST' ? 201 : 200);
+        } elseif (($body['action'] ?? '') === 'annotation-delete') {
+            literatureDeleteAnnotation(literatureSafeKey($body['paperKey'] ?? $body['paper_key'] ?? ''), literatureSafeKey($body['id'] ?? ''));
+            literatureJson($Response, array('deleted' => true));
         } else {
             $card = literatureWriteCard($body);
             literatureJson($Response, $card, $method === 'POST' ? 201 : 200);
@@ -576,6 +870,9 @@ try {
         $paperKey = literatureSafeKey($Request->query->get('paper_key') ?? $Request->query->get('paperKey'));
         if ($action === 'evidence') {
             literatureDeleteEvidence($paperKey, literatureSafeKey($Request->query->get('id')));
+            literatureJson($Response, null, 204);
+        } elseif ($action === 'annotation') {
+            literatureDeleteAnnotation($paperKey, literatureSafeKey($Request->query->get('id')));
             literatureJson($Response, null, 204);
         } elseif ($action === 'paper') {
             literatureDeletePaper($paperKey);
