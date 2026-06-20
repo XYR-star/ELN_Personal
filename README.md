@@ -67,9 +67,17 @@ The planner adds a personal experiment planning calendar inside the eLabFTW UI. 
 
 ### Literature
 
-The Literature page provides a lightweight Zotero-like view inside eLabFTW. Zotero remains the reference manager and source of metadata; the ELN page reads it through a server-side API proxy and stores local reading cards on the data disk.
+The Literature page provides a lightweight Zotero-like view inside eLabFTW. Zotero remains the reference manager and source of metadata; the ELN page reads it through a server-side API proxy and stores local reading cards on the data disk. If Zotero is not configured yet, local paper records can still be created from the `Local paper` button.
 
-第一版只读取 Zotero，不写回 Zotero。ELN 本地保存阅读状态、总结、阅读笔记、关联实验和关联资源。
+第一版只读取 Zotero，不写回 Zotero。ELN 本地保存阅读状态、总结、阅读笔记、关联实验、关联资源，以及可回溯到具体段落/图片/发现的 Evidence cards。
+
+Evidence cards can be copied into the Markdown editor as references:
+
+```md
+[[Evidence:PaperKey#fig-20260620093000]]
+```
+
+The Markdown editor renders these references as clickable source chips. `[[Experiment:12]]` and `[[Resource:11]]` remain available for native eLabFTW record links, while Evidence cards are for paper-level quotes, figures, findings, and protocol hints.
 
 Configure Zotero from the `Literature -> API config` button, with environment variables in the eLabFTW container, or with a data-disk config file:
 
@@ -91,6 +99,14 @@ Inside the container this appears as:
 
 ```text
 /elabftw/silverbullet-space/Literature/zotero-config.json
+```
+
+Local literature files are stored on the data disk:
+
+```text
+/www/elabftw-data/silverbullet-space/Literature/papers
+/www/elabftw-data/silverbullet-space/Literature/cards
+/www/elabftw-data/silverbullet-space/Literature/evidence
 ```
 
 ### Ideas

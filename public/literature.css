@@ -108,12 +108,47 @@
   gap: .75rem;
 }
 
-.literature-card-form label {
+.literature-card-form label,
+.literature-evidence-form label {
   display: grid;
   gap: .25rem;
   margin-bottom: 0;
   color: var(--literature-muted);
   font-size: .88rem;
+}
+
+.literature-evidence {
+  padding-top: 1rem;
+  border-top: 1px solid var(--literature-border);
+}
+
+.literature-evidence-list {
+  display: grid;
+  gap: .6rem;
+}
+
+.literature-evidence-card {
+  padding: .75rem;
+  background: #fff;
+  border: 1px solid var(--literature-border);
+  border-left: 4px solid var(--literature-accent);
+  border-radius: .2rem;
+}
+
+.literature-evidence-quote {
+  padding: .5rem .75rem;
+  color: #495057;
+  background: #f8f9fa;
+  border-left: 3px solid #ced4da;
+}
+
+.literature-evidence-form {
+  display: grid;
+  gap: .75rem;
+  padding: .75rem;
+  background: #f8f9fa;
+  border: 1px solid var(--literature-border);
+  border-radius: .2rem;
 }
 
 .literature-dialog {

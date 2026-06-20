@@ -32,6 +32,18 @@
   border-radius: 3px;
 }
 
+.silverbullet-preview .silverbullet-evidence-ref {
+  display: inline-flex;
+  align-items: center;
+  padding: .05rem .35rem;
+  color: #0b7285;
+  background: #e3fafc;
+  border: 1px solid #99e9f2;
+  border-radius: 3px;
+  font-size: .92em;
+  font-weight: 700;
+}
+
 .silverbullet-help-dialog {
   width: min(680px, calc(100vw - 32px));
   padding: 0;

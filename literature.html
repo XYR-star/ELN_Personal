@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/literature.css?v=20260620-zotero-config1'>
+<link rel='stylesheet' href='/planner-assets/literature.css?v=20260620-evidence1'>
 
 <div class='literature-workspace' data-literature-root data-api-base='/literature-api.php' data-lang='{{ App.getLang() }}'>
   <div class='alert alert-info literature-setup' data-literature-setup hidden>
@@ -31,6 +31,7 @@
       </form>
       <div class='btn-group ml-lg-auto mt-2 mt-lg-0'>
         <button type='button' class='btn btn-secondary' data-literature-refresh><i class='fas fa-rotate fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '刷新' : 'Refresh' }}</button>
+        <button type='button' class='btn btn-primary' data-literature-new-paper><i class='fas fa-plus fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '本地文献' : 'Local paper' }}</button>
         <a class='btn btn-secondary' href='https://www.zotero.org/' target='_blank' rel='noopener'><i class='fas fa-arrow-up-right-from-square fa-fw mr-1'></i>Zotero</a>
         <button type='button' class='btn btn-secondary' data-literature-config><i class='fas fa-key fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'API 配置' : 'API config' }}</button>
       </div>
@@ -116,7 +117,58 @@
       </div>
     </form>
   </dialog>
+
+  <dialog class='literature-dialog' data-literature-paper-dialog>
+    <form data-literature-paper-form method='dialog'>
+      <div class='literature-dialog-head'>
+        <h2 class='h3 mb-0'>{{ App.getLang() starts with 'zh' ? '新建本地文献' : 'New local paper' }}</h2>
+        <button type='button' class='btn btn-secondary' data-literature-paper-close aria-label='{{ App.getLang() starts with 'zh' ? '关闭' : 'Close' }}'><i class='fas fa-times fa-fw'></i></button>
+      </div>
+      <p class='text-muted small mt-2 mb-3'>
+        {{ App.getLang() starts with 'zh'
+          ? 'Zotero API 还没配置时也可以先建本地文献，之后证据卡片可以继续挂在这里。'
+          : 'Use this before Zotero is configured. Evidence cards can stay attached to this local paper.' }}
+      </p>
+      <label>
+        {{ App.getLang() starts with 'zh' ? '标题' : 'Title' }}
+        <input class='form-control' name='title' required>
+      </label>
+      <div class='row'>
+        <div class='col-md-4'>
+          <label>
+            {{ App.getLang() starts with 'zh' ? 'Key（可选）' : 'Key (optional)' }}
+            <input class='form-control' name='key' placeholder='HCT116FAPS2026'>
+          </label>
+        </div>
+        <div class='col-md-4 mt-2 mt-md-0'>
+          <label>
+            DOI
+            <input class='form-control' name='doi' placeholder='10.xxxx/...'>
+          </label>
+        </div>
+        <div class='col-md-4 mt-2 mt-md-0'>
+          <label>
+            {{ App.getLang() starts with 'zh' ? '年份' : 'Year' }}
+            <input class='form-control' name='year' inputmode='numeric'>
+          </label>
+        </div>
+      </div>
+      <label>
+        URL
+        <input class='form-control' name='url' type='url' placeholder='https://...'>
+      </label>
+      <label>
+        Tags
+        <input class='form-control' name='tags' placeholder='faps, cell'>
+      </label>
+      <div class='alert alert-danger mt-3 mb-0' data-literature-paper-error hidden></div>
+      <div class='d-flex justify-content-end mt-4'>
+        <button type='button' class='btn btn-ghost hl-hover-gray mr-2' data-literature-paper-close>{{ App.getLang() starts with 'zh' ? '取消' : 'Cancel' }}</button>
+        <button type='submit' class='btn btn-primary'><i class='fas fa-save fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '保存' : 'Save' }}</button>
+      </div>
+    </form>
+  </dialog>
 </div>
 
-<script defer src='/planner-assets/literature.js?v=20260620-zotero-config1'></script>
+<script defer src='/planner-assets/literature.js?v=20260620-evidence1'></script>
 {% endblock %}

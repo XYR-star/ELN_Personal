@@ -2,8 +2,8 @@
 
 {% block body %}
 <link rel='stylesheet' href='/planner-assets/mobile-quick-upload.css?v=20260618-mobile-upload1'>
-{% if Entity.entityType.value == 'experiments' %}
-<link rel='stylesheet' href='/planner-assets/silverbullet-editor.css?v=20260619-sb5'>
+{% if Entity.entityType.value == 'experiments' or Entity.entityType.value == 'items' %}
+<link rel='stylesheet' href='/planner-assets/silverbullet-editor.css?v=20260620-evidence1'>
 {% endif %}
 
 {% embed 'view-edit.html' %}
@@ -84,7 +84,7 @@
     {% include 'drive-links.html' %}
   {% endif %}
 
-  {% if Entity.entityType.value == 'experiments' %}
+  {% if Entity.entityType.value == 'experiments' or Entity.entityType.value == 'items' %}
     {% include 'silverbullet-editor.html' %}
   {% endif %}
 
@@ -233,7 +233,7 @@
 >
 </div>
 <script defer src='/planner-assets/mobile-quick-upload.js?v=20260618-mobile-upload1'></script>
-{% if Entity.entityType.value == 'experiments' %}
-<script defer src='/planner-assets/silverbullet-editor.js?v=20260619-sb5'></script>
+{% if Entity.entityType.value == 'experiments' or Entity.entityType.value == 'items' %}
+<script defer src='/planner-assets/silverbullet-editor.js?v=20260620-evidence1'></script>
 {% endif %}
 {% endblock body %}

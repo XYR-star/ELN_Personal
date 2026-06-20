@@ -133,7 +133,7 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
   await expect(page.locator('a.nav-link[href="literature.php"]')).toBeVisible();
   await expect(page.locator('a.nav-link[href="ideas.php"]')).toBeVisible();
 
-  await page.goto('/literature.php', { waitUntil: 'domcontentloaded' });
+  await page.goto(`/literature.php?e2e=${Date.now()}`, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-literature-root]')).toBeVisible();
   await expect(page.locator('#realContainer')).toHaveClass(/max-width-70/);
   await expect(page.locator('#pageTitle')).toBeVisible();
@@ -160,6 +160,50 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
   await expect(page.locator('[data-idea-markdown]')).toBeVisible();
   await expect(page.locator('[data-ideas-list]')).toBeVisible();
   await expect(page.locator('[data-ideas-calendar]')).toBeVisible();
+
+  expect(errors).toEqual([]);
+});
+
+test('Literature can create a local paper and evidence reference', async ({ page }) => {
+  const errors = await collectPageErrors(page);
+  const suffix = `${Date.now()}`.slice(-7);
+  const paperKey = `E2EPaper${suffix}`;
+  const paperTitle = `E2E literature paper ${suffix}`;
+
+  await page.goto(`/literature.php?e2e=${suffix}`, { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+
+  await page.locator('[data-literature-new-paper]').click();
+  await expect(page.locator('[data-literature-paper-dialog]')).toBeVisible();
+  await page.locator('[data-literature-paper-form] input[name="title"]').fill(paperTitle);
+  await page.locator('[data-literature-paper-form] input[name="key"]').fill(paperKey);
+  await page.locator('[data-literature-paper-form] input[name="doi"]').fill('10.1000/e2e');
+  await page.locator('[data-literature-paper-form] button[type="submit"]').click();
+
+  await expect(page.locator('[data-literature-item]', { hasText: paperTitle })).toBeVisible();
+  await expect(page.locator('[data-literature-detail]')).toContainText(paperTitle);
+
+  await page.locator('[data-literature-evidence-form] select[name="type"]').selectOption('figure');
+  await page.locator('[data-literature-evidence-form] input[name="page"]').fill('3');
+  await page.locator('[data-literature-evidence-form] input[name="section"]').fill('Fig. 2B');
+  await page.locator('[data-literature-evidence-form] textarea[name="original_text"]').fill(`E2E quote ${suffix}`);
+  await page.locator('[data-literature-evidence-form] textarea[name="my_note"]').fill('Useful for [[Experiment:12]].');
+  await page.locator('[data-literature-evidence-form] button[type="submit"]').click();
+
+  await expect(page.locator('.literature-evidence-card', { hasText: `E2E quote ${suffix}` })).toBeVisible();
+  await expect(page.locator('.literature-evidence-card code')).toContainText(`[[Evidence:${paperKey}#fig-`);
+
+  await page.evaluate(async ({ paperKey: key }) => {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    await fetch(`/literature-api.php?action=paper&paper_key=${encodeURIComponent(key)}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+    });
+  }, { paperKey });
 
   expect(errors).toEqual([]);
 });

@@ -71,6 +71,10 @@
     return escapeHtml(value)
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\[\[Evidence:\s*([A-Za-z0-9_-]+)#([A-Za-z0-9_-]+)\]\]/g, (_match, paperKey, evidenceId) => {
+        const href = `/literature.php?paper=${encodeURIComponent(paperKey)}&evidence=${encodeURIComponent(evidenceId)}`;
+        return `<a class="silverbullet-evidence-ref" href="${href}">[[Evidence:${paperKey}#${evidenceId}]]</a>`;
+      })
       .replace(/\[\[(Experiment|Resource):\s*(\d+)\]\]/gi, (_match, type, id) => {
         const href = type.toLowerCase() === 'experiment' ? `/experiments.php?mode=view&id=${id}` : `/database.php?mode=view&id=${id}`;
         return `<a href="${href}">[[${type}:${id}]]</a>`;

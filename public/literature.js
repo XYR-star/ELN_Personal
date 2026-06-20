@@ -21,6 +21,10 @@
   const configForm = root.querySelector('[data-literature-config-form]');
   const configStatus = root.querySelector('[data-literature-config-status]');
   const configError = root.querySelector('[data-literature-config-error]');
+  const newPaperButton = root.querySelector('[data-literature-new-paper]');
+  const paperDialog = root.querySelector('[data-literature-paper-dialog]');
+  const paperForm = root.querySelector('[data-literature-paper-form]');
+  const paperError = root.querySelector('[data-literature-paper-error]');
 
   let state = {
     configured: false,
@@ -35,6 +39,7 @@
     collections: [],
     tags: [],
     cards: {},
+    evidence: {},
     selectedKey: '',
     collection: '',
     tag: '',
@@ -83,6 +88,15 @@
     return String(value || '').split(/[\s,，]+/).map((part) => Number(part.trim())).filter((id, index, arr) => Number.isInteger(id) && id > 0 && arr.indexOf(id) === index);
   }
 
+  function parseTags(value) {
+    return String(value || '').split(/[\s,，#]+/).map((part) => part.trim().replace(/[^A-Za-z0-9_-]/g, '').toLowerCase()).filter((tag, index, arr) => tag && arr.indexOf(tag) === index);
+  }
+
+  function paperKeyFromTitle(title, fallback = 'Paper') {
+    const cleaned = String(title || fallback).replace(/[^A-Za-z0-9_-]/g, '');
+    return (cleaned || fallback).slice(0, 48);
+  }
+
   function cardFor(key) {
     return state.cards[key] || {
       itemKey: key,
@@ -92,6 +106,10 @@
       linked_experiments: [],
       linked_resources: [],
     };
+  }
+
+  function evidenceFor(key) {
+    return state.evidence[key] || [];
   }
 
   function statusLabel(status) {
@@ -105,6 +123,7 @@
 
   function itemSubtitle(item) {
     return [
+      item.local ? (isZh ? '本地' : 'Local') : '',
       item.creators?.slice(0, 3).join(', '),
       item.year,
       item.publicationTitle,
@@ -173,6 +192,7 @@
       for (const tag of item.tags.slice(0, 4)) chips.append(text('span', 'literature-chip', `#${tag}`));
       if (card.linked_experiments.length) chips.append(text('span', 'literature-chip', `Exp ${card.linked_experiments.join(', ')}`));
       if (card.linked_resources.length) chips.append(text('span', 'literature-chip', `Res ${card.linked_resources.join(', ')}`));
+      if (evidenceFor(item.key).length) chips.append(text('span', 'literature-chip', `${evidenceFor(item.key).length} ${isZh ? '证据' : 'evidence'}`));
       button.append(chips);
       list.append(button);
     }
@@ -240,6 +260,89 @@
     form.elements.linked_experiments.value = card.linked_experiments.join(', ');
     form.elements.linked_resources.value = card.linked_resources.join(', ');
     detail.append(form);
+
+    const evidenceSection = document.createElement('section');
+    evidenceSection.className = 'literature-evidence mt-4';
+    const evidenceCards = evidenceFor(item.key);
+    evidenceSection.append(text('h3', 'h5 mb-2', isZh ? '证据卡片' : 'Evidence cards'));
+    const intro = text('p', 'text-muted small', isZh
+      ? '保存文献中的某段话、某张图或关键发现，然后把引用插入实验/资源 Markdown。'
+      : 'Save a quoted paragraph, figure, or finding, then insert the reference into experiment/resource Markdown.');
+    evidenceSection.append(intro);
+
+    const evidenceList = document.createElement('div');
+    evidenceList.className = 'literature-evidence-list';
+    if (!evidenceCards.length) {
+      evidenceList.append(text('div', 'text-muted small mb-2', isZh ? '还没有证据卡片。' : 'No evidence cards yet.'));
+    }
+    for (const evidence of evidenceCards) {
+      const cardNode = document.createElement('article');
+      cardNode.className = 'literature-evidence-card';
+      const head = document.createElement('div');
+      head.className = 'd-flex justify-content-between align-items-start';
+      head.append(text('strong', '', `${evidence.type}${evidence.page ? ` · p.${evidence.page}` : ''}${evidence.section ? ` · ${evidence.section}` : ''}`));
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'btn btn-sm btn-secondary';
+      copy.dataset.literatureCopyEvidence = evidence.reference;
+      copy.innerHTML = `<i class="fas fa-copy fa-fw mr-1"></i>${isZh ? '复制引用' : 'Copy ref'}`;
+      head.append(copy);
+      cardNode.append(head);
+      if (evidence.image_url) {
+        const imageLink = document.createElement('a');
+        imageLink.href = evidence.image_url;
+        imageLink.target = '_blank';
+        imageLink.rel = 'noopener';
+        imageLink.className = 'small d-inline-block mt-2';
+        imageLink.textContent = isZh ? '打开图片/图源' : 'Open figure/source';
+        cardNode.append(imageLink);
+      }
+      if (evidence.original_text) cardNode.append(text('blockquote', 'literature-evidence-quote mt-2 mb-2', evidence.original_text));
+      if (evidence.my_note) cardNode.append(text('p', 'mb-1', evidence.my_note));
+      cardNode.append(text('code', 'small', evidence.reference));
+      evidenceList.append(cardNode);
+    }
+    evidenceSection.append(evidenceList);
+
+    const evidenceForm = document.createElement('form');
+    evidenceForm.className = 'literature-evidence-form mt-3';
+    evidenceForm.dataset.literatureEvidenceForm = item.key;
+    evidenceForm.innerHTML = `
+      <div class="row">
+        <div class="col-md-4">
+          <label>${isZh ? '类型' : 'Type'}
+            <select class="form-control" name="type">
+              <option value="quote">${isZh ? '段落引用' : 'Quote'}</option>
+              <option value="figure">${isZh ? '图片/图' : 'Figure'}</option>
+              <option value="finding">${isZh ? '关键发现' : 'Finding'}</option>
+              <option value="protocol">${isZh ? '方法提示' : 'Protocol hint'}</option>
+            </select>
+          </label>
+        </div>
+        <div class="col-md-3 mt-2 mt-md-0">
+          <label>${isZh ? '页码' : 'Page'}
+            <input class="form-control" name="page" placeholder="3">
+          </label>
+        </div>
+        <div class="col-md-5 mt-2 mt-md-0">
+          <label>${isZh ? '章节/图号' : 'Section / figure'}
+            <input class="form-control" name="section" placeholder="Fig. 2B">
+          </label>
+        </div>
+      </div>
+      <label>${isZh ? '原文段落 / 图注' : 'Original text / caption'}
+        <textarea class="form-control" name="original_text" rows="4"></textarea>
+      </label>
+      <label>${isZh ? '图片或来源 URL（可选）' : 'Figure/source URL (optional)'}
+        <input class="form-control" name="image_url" type="url" placeholder="https://...">
+      </label>
+      <label>${isZh ? '我的备注 / 为什么重要' : 'My note / why it matters'}
+        <textarea class="form-control" name="my_note" rows="3"></textarea>
+      </label>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-plus fa-fw mr-1"></i>${isZh ? '保存证据' : 'Save evidence'}</button>
+    `;
+    evidenceSection.append(evidenceForm);
+    detail.append(evidenceSection);
   }
 
   function render() {
@@ -304,6 +407,7 @@
       state.collections = data.collections || [];
       state.tags = data.tags || [];
       state.cards = data.cards || {};
+      state.evidence = data.evidence || {};
       if (setupBox) setupBox.hidden = state.configured;
       if (configPath && data.setup?.config_path) configPath.textContent = data.setup.config_path;
       renderConfigStatus();
@@ -357,6 +461,54 @@
     }
   });
 
+  detail.addEventListener('submit', async (event) => {
+    const form = event.target.closest('[data-literature-evidence-form]');
+    if (!form) return;
+    event.preventDefault();
+    const item = state.items.find((candidate) => candidate.key === form.dataset.literatureEvidenceForm);
+    const payload = {
+      action: 'evidence',
+      paperKey: form.dataset.literatureEvidenceForm,
+      paper: item ? {
+        key: item.key,
+        title: item.title,
+        creators: item.creators || [],
+        year: item.year || '',
+        publicationTitle: item.publicationTitle || '',
+        doi: item.doi || '',
+        url: item.url || '',
+        tags: item.tags || [],
+      } : null,
+      type: form.elements.type.value,
+      page: form.elements.page.value,
+      section: form.elements.section.value,
+      original_text: form.elements.original_text.value,
+      image_url: form.elements.image_url.value,
+      my_note: form.elements.my_note.value,
+    };
+    try {
+      const data = await request({ method: 'POST', body: JSON.stringify(payload) });
+      const evidence = data.evidence;
+      state.evidence[evidence.paperKey] = [evidence, ...evidenceFor(evidence.paperKey).filter((item) => item.id !== evidence.id)];
+      render();
+    } catch (error) {
+      setError(error.message || 'Could not save evidence.');
+    }
+  });
+
+  detail.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-literature-copy-evidence]');
+    if (!button) return;
+    const value = button.dataset.literatureCopyEvidence || '';
+    try {
+      await navigator.clipboard?.writeText(value);
+      button.textContent = isZh ? '已复制' : 'Copied';
+      setTimeout(render, 900);
+    } catch {
+      window.prompt(isZh ? '复制这段引用' : 'Copy this reference', value);
+    }
+  });
+
   searchForm.addEventListener('submit', (event) => {
     event.preventDefault();
     state.q = searchInput.value.trim();
@@ -385,6 +537,52 @@
       await load();
     } catch (error) {
       setConfigError(error.message || 'Could not save Zotero config.');
+    }
+  });
+  newPaperButton?.addEventListener('click', () => {
+    if (!paperDialog || !paperForm) return;
+    paperForm.reset();
+    if (paperError) paperError.hidden = true;
+    if (typeof paperDialog.showModal === 'function') {
+      paperDialog.showModal();
+    } else {
+      paperDialog.setAttribute('open', '');
+    }
+  });
+  root.querySelectorAll('[data-literature-paper-close]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (typeof paperDialog?.close === 'function') paperDialog.close();
+      else paperDialog?.removeAttribute('open');
+    });
+  });
+  paperForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (paperError) paperError.hidden = true;
+    const formData = new FormData(paperForm);
+    const title = String(formData.get('title') || '').trim();
+    const payload = {
+      action: 'paper',
+      key: paperKeyFromTitle(formData.get('key') || title),
+      title,
+      doi: String(formData.get('doi') || '').trim(),
+      year: String(formData.get('year') || '').trim(),
+      url: String(formData.get('url') || '').trim(),
+      tags: parseTags(formData.get('tags')),
+    };
+    try {
+      const data = await request({ method: 'POST', body: JSON.stringify(payload) });
+      const paper = data.paper;
+      state.items = [paper, ...state.items.filter((item) => item.key !== paper.key)];
+      state.evidence[paper.key] = state.evidence[paper.key] || [];
+      state.selectedKey = paper.key;
+      if (typeof paperDialog?.close === 'function') paperDialog.close();
+      else paperDialog?.removeAttribute('open');
+      render();
+    } catch (error) {
+      if (paperError) {
+        paperError.textContent = error.message || 'Could not save local paper.';
+        paperError.hidden = false;
+      }
     }
   });
   load();
