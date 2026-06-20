@@ -144,6 +144,11 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
   await expect(page.locator('[data-literature-detail]')).toBeVisible();
   await expect(page.locator('[data-literature-collections]')).toBeVisible();
   await expect(page.locator('[data-literature-tags]')).toBeVisible();
+  await expect(page.locator('[data-literature-config]')).toBeVisible();
+  await page.locator('[data-literature-config]').click();
+  await expect(page.locator('[data-literature-config-dialog]')).toBeVisible();
+  await page.locator('[data-literature-config-close]').first().click();
+  await expect(page.locator('[data-literature-config-dialog]')).not.toBeVisible();
 
   await page.goto('/ideas.php', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-ideas-root]')).toBeVisible();

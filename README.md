@@ -71,7 +71,7 @@ The Literature page provides a lightweight Zotero-like view inside eLabFTW. Zote
 
 第一版只读取 Zotero，不写回 Zotero。ELN 本地保存阅读状态、总结、阅读笔记、关联实验和关联资源。
 
-Configure Zotero with environment variables in the eLabFTW container, or with a data-disk config file:
+Configure Zotero from the `Literature -> API config` button, with environment variables in the eLabFTW container, or with a data-disk config file:
 
 ```json
 {

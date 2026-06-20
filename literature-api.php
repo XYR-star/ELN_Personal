@@ -58,6 +58,19 @@ function literatureDataDir(): string
     return LITERATURE_ROOT . '/Literature';
 }
 
+function literatureConfigPath(): string
+{
+    return literatureDataDir() . '/zotero-config.json';
+}
+
+function literatureEnsureDataDir(): void
+{
+    $dir = literatureDataDir();
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new Exception('Could not create literature data directory');
+    }
+}
+
 function literatureCardsDir(): string
 {
     return literatureDataDir() . '/cards';
@@ -65,6 +78,7 @@ function literatureCardsDir(): string
 
 function literatureEnsureCardsDir(): void
 {
+    literatureEnsureDataDir();
     $dir = literatureCardsDir();
     if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
         throw new Exception('Could not create literature card directory');
@@ -134,7 +148,7 @@ function literatureConfig(): array
         'library_id' => getenv('ZOTERO_LIBRARY_ID') ?: '',
         'library_type' => strtolower(getenv('ZOTERO_LIBRARY_TYPE') ?: 'user'),
     );
-    $file = literatureDataDir() . '/zotero-config.json';
+    $file = literatureConfigPath();
     if (is_file($file)) {
         $fromFile = json_decode(file_get_contents($file) ?: '{}', true, 512, JSON_THROW_ON_ERROR) ?: array();
         $config = array_merge($config, array_filter(array(
@@ -146,6 +160,43 @@ function literatureConfig(): array
     $config['library_type'] = $config['library_type'] === 'group' ? 'group' : 'user';
     $config['configured'] = $config['api_key'] !== '' && preg_match('/^\d+$/', (string) $config['library_id']) === 1;
     return $config;
+}
+
+function literaturePublicConfig(array $config): array
+{
+    return array(
+        'configured' => (bool) $config['configured'],
+        'library_id' => (string) ($config['library_id'] ?? ''),
+        'library_type' => $config['library_type'] === 'group' ? 'group' : 'user',
+        'has_api_key' => (string) ($config['api_key'] ?? '') !== '',
+        'config_path' => literatureConfigPath(),
+    );
+}
+
+function literatureWriteConfig(array $body): array
+{
+    literatureEnsureDataDir();
+    $apiKey = literatureCleanText($body['api_key'] ?? '', 255);
+    $libraryId = literatureCleanText($body['library_id'] ?? '', 64);
+    $libraryType = strtolower(literatureCleanText($body['library_type'] ?? 'user', 16));
+    if ($apiKey === '') {
+        throw new Exception('Zotero API key is required');
+    }
+    if (!preg_match('/^\d+$/', $libraryId)) {
+        throw new Exception('Zotero library id must be numeric');
+    }
+    if (!in_array($libraryType, array('user', 'group'), true)) {
+        throw new Exception('Zotero library type must be user or group');
+    }
+    $config = array(
+        'api_key' => $apiKey,
+        'library_id' => $libraryId,
+        'library_type' => $libraryType,
+        'updated_at' => (new \DateTimeImmutable('now', new \DateTimeZone('Asia/Shanghai')))->format(\DateTimeInterface::ATOM),
+    );
+    file_put_contents(literatureConfigPath(), json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n", LOCK_EX);
+    chmod(literatureConfigPath(), 0640);
+    return literaturePublicConfig(array_merge($config, array('configured' => true)));
 }
 
 function literaturePrefix(array $config): string
@@ -223,6 +274,9 @@ try {
     $config = literatureConfig();
 
     if ($method === 'GET') {
+        if ((string) $Request->query->get('action') === 'config') {
+            literatureJson($Response, array('config' => literaturePublicConfig($config)));
+        } else {
         literatureEnsureCardsDir();
         $cards = literatureListCards();
         $cardMap = array();
@@ -233,8 +287,9 @@ try {
         if (!$config['configured']) {
             literatureJson($Response, array(
                 'configured' => false,
+                'config' => literaturePublicConfig($config),
                 'setup' => array(
-                    'config_path' => literatureDataDir() . '/zotero-config.json',
+                    'config_path' => literatureConfigPath(),
                     'env' => array('ZOTERO_API_KEY', 'ZOTERO_LIBRARY_ID', 'ZOTERO_LIBRARY_TYPE'),
                 ),
                 'items' => array(),
@@ -260,6 +315,7 @@ try {
             $tags = literatureZoteroRequest($config, "{$prefix}/tags", array('format' => 'json', 'limit' => 100));
             literatureJson($Response, array(
                 'configured' => true,
+                'config' => literaturePublicConfig($config),
                 'library' => array('id' => $config['library_id'], 'type' => $config['library_type']),
                 'items' => $items,
                 'collections' => $collections,
@@ -267,10 +323,15 @@ try {
                 'cards' => $cardMap,
             ));
         }
+        }
     } elseif ($method === 'POST' || $method === 'PUT' || $method === 'PATCH') {
         $body = literatureBody();
-        $card = literatureWriteCard($body);
-        literatureJson($Response, $card, $method === 'POST' ? 201 : 200);
+        if (($body['action'] ?? '') === 'config') {
+            literatureJson($Response, array('config' => literatureWriteConfig($body)));
+        } else {
+            $card = literatureWriteCard($body);
+            literatureJson($Response, $card, $method === 'POST' ? 201 : 200);
+        }
     } else {
         throw new Exception('Unsupported literature endpoint');
     }
