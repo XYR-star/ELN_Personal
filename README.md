@@ -8,7 +8,8 @@ This repository keeps the lightweight add-ons and template overrides used on top
 
 - Personal-mode navigation cleanup for a single-user ELN workflow.
 - Experiment planner embedded into eLabFTW.
-- Empty Literature and Ideas workspaces reserved for future research workflows.
+- Zotero-like Literature workspace backed by Zotero Web API and local reading cards.
+- Memo-style Ideas workspace for quick Markdown notes and experiment/resource links.
 - Visual freezer/storage map linked to eLabFTW resources.
 - Experiment diagram panel for drawing workflow sketches above the main text.
 - Lightweight Google Drive file links on experiment and resource edit pages.
@@ -25,7 +26,7 @@ The repository stores code only. Runtime data, uploaded files, database contents
 ├── head.html                    # eLabFTW navigation template override
 ├── personal-mode.html           # Tools page documenting hidden/kept entries
 ├── planner.html                 # Planner page shell
-├── literature.html              # Literature workspace shell
+├── literature.html              # Zotero-like Literature workspace
 ├── ideas.html                   # Ideas workspace shell
 ├── storage-map.html             # Visual storage map shell
 ├── storage-view-edit.html       # Resource storage panel override
@@ -64,11 +65,39 @@ The planner adds a personal experiment planning calendar inside the eLabFTW UI. 
 
 规划日历用于安排实验事项，不等同于 eLabFTW 原生的仪器预约 Scheduler。
 
-### Literature And Ideas
+### Literature
 
-The Literature and Ideas entries are top-level workspace shells. They are intentionally empty for now, so their final layout can be shaped after real use cases become clearer.
+The Literature page provides a lightweight Zotero-like view inside eLabFTW. Zotero remains the reference manager and source of metadata; the ELN page reads it through a server-side API proxy and stores local reading cards on the data disk.
 
-`文献调研` 和 `灵感` 目前只是主界面占位，保留 eLabFTW 风格的空状态，后续再决定按项目、主题、状态、实验关联或时间线组织。
+第一版只读取 Zotero，不写回 Zotero。ELN 本地保存阅读状态、总结、阅读笔记、关联实验和关联资源。
+
+Configure Zotero with environment variables in the eLabFTW container, or with a data-disk config file:
+
+```json
+{
+  "api_key": "zotero-api-key",
+  "library_id": "1234567",
+  "library_type": "user"
+}
+```
+
+Runtime config file path:
+
+```text
+/www/elabftw-data/silverbullet-space/Literature/zotero-config.json
+```
+
+Inside the container this appears as:
+
+```text
+/elabftw/silverbullet-space/Literature/zotero-config.json
+```
+
+### Ideas
+
+The Ideas page is a memo-style Markdown capture area for quick observations, hypotheses, and follow-up thoughts. It supports manual tags, `#tag` extraction, optional location filtering, `[[Experiment:12]]`, and `[[Resource:11]]`.
+
+`灵感` 是轻量 memo 区，用于像发动态一样快速记录想法，并可按日期、标签和位置回看。
 
 ### Storage Map
 
@@ -129,6 +158,7 @@ Current important override:
 /www/elabftw-data/overrides/literature.html
 /www/elabftw-data/overrides/ideas.html
 /www/elabftw-data/overrides/literature.php
+/www/elabftw-data/overrides/literature-api.php
 /www/elabftw-data/overrides/ideas.php
 /www/elabftw-data/overrides/drive-links.html
 /www/elabftw-data/overrides/drive-links-api.php

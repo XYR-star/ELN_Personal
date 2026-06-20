@@ -139,7 +139,11 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
   await expect(page.locator('#pageTitle')).toBeVisible();
   await expect(page.locator('#pageTitle')).toContainText(/Literature|文献调研/);
   await expect(page.locator('[data-literature-root] h1')).toHaveCount(0);
-  await expect(page.locator('[data-empty-state]')).toBeVisible();
+  await expect(page.locator('.literature-grid')).toBeVisible();
+  await expect(page.locator('[data-literature-list]')).toBeVisible();
+  await expect(page.locator('[data-literature-detail]')).toBeVisible();
+  await expect(page.locator('[data-literature-collections]')).toBeVisible();
+  await expect(page.locator('[data-literature-tags]')).toBeVisible();
 
   await page.goto('/ideas.php', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-ideas-root]')).toBeVisible();

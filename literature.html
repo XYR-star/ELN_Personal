@@ -1,32 +1,80 @@
 {% extends 'base.html' %}
 {% block body %}
-<div class='container mt-4 mb-5' data-literature-root>
-  <div class='row'>
-    <div class='col-lg-8'>
-      <div class='card' data-empty-state>
-        <div class='card-body text-center py-5'>
-          <i class='fas fa-book-open fa-3x text-muted mb-3'></i>
-          <h2 class='h4 mb-2'>{{ App.getLang() starts with 'zh' ? '暂未放置内容' : 'No literature layout yet' }}</h2>
-          <p class='text-muted mb-0'>
-            {{ App.getLang() starts with 'zh'
-              ? '先保留这个主界面，后续可以决定按项目、主题、论文状态或实验关联来组织。'
-              : 'This shell is ready. The content model can later be organized by project, topic, paper status, or experiment links.' }}
-          </p>
+<link rel='stylesheet' href='/planner-assets/literature.css?v=20260619-zotero1'>
+
+<div class='literature-workspace' data-literature-root data-api-base='/literature-api.php' data-lang='{{ App.getLang() }}'>
+  <div class='alert alert-info literature-setup' data-literature-setup hidden>
+    <div class='d-flex align-items-start'>
+      <i class='fas fa-circle-info fa-fw mt-1 mr-2'></i>
+      <div>
+        <strong>{{ App.getLang() starts with 'zh' ? 'Zotero 尚未配置' : 'Zotero is not configured yet' }}</strong>
+        <div class='small mt-1'>
+          {{ App.getLang() starts with 'zh'
+            ? '配置 Zotero API key 后，这里会显示你的 Zotero 文献库；当前页面可以先查看布局。'
+            : 'Add a Zotero API key to show your library here. The page remains available as a layout preview.' }}
         </div>
-      </div>
-    </div>
-    <div class='col-lg-4 mt-3 mt-lg-0'>
-      <div class='card'>
-        <div class='card-header font-weight-bold'>
-          {{ App.getLang() starts with 'zh' ? '预留区域' : 'Reserved areas' }}
-        </div>
-        <div class='list-group list-group-flush'>
-          <div class='list-group-item text-muted'><i class='fas fa-folder-tree fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '项目 / 主题' : 'Projects / topics' }}</div>
-          <div class='list-group-item text-muted'><i class='fas fa-file-lines fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '论文卡片' : 'Paper cards' }}</div>
-          <div class='list-group-item text-muted'><i class='fab fa-google-drive fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'Drive / DOI / PDF 链接' : 'Drive / DOI / PDF links' }}</div>
-        </div>
+        <code data-literature-config-path></code>
       </div>
     </div>
   </div>
+
+  <div class='literature-toolbar card mb-3'>
+    <div class='card-body'>
+      <form class='literature-search' data-literature-search-form>
+        <label class='sr-only' for='literatureSearch'>{{ App.getLang() starts with 'zh' ? '搜索文献' : 'Search literature' }}</label>
+        <div class='input-group'>
+          <input id='literatureSearch' class='form-control' data-literature-search placeholder='{{ App.getLang() starts with 'zh' ? '搜索标题、作者、摘要、DOI' : 'Search title, author, abstract, DOI' }}'>
+          <div class='input-group-append'>
+            <button class='btn btn-primary' type='submit'><i class='fas fa-magnifying-glass fa-fw'></i></button>
+          </div>
+        </div>
+      </form>
+      <div class='btn-group ml-lg-auto mt-2 mt-lg-0'>
+        <button type='button' class='btn btn-secondary' data-literature-refresh><i class='fas fa-rotate fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '刷新' : 'Refresh' }}</button>
+        <a class='btn btn-secondary' href='https://www.zotero.org/' target='_blank' rel='noopener'><i class='fas fa-arrow-up-right-from-square fa-fw mr-1'></i>Zotero</a>
+      </div>
+    </div>
+  </div>
+
+  <div class='literature-grid'>
+    <aside class='card literature-sidebar'>
+      <div class='card-header font-weight-bold'>
+        <i class='fas fa-folder-tree fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'Collections' : 'Collections' }}
+      </div>
+      <div class='list-group list-group-flush' data-literature-collections>
+        <button type='button' class='list-group-item list-group-item-action active' data-literature-collection=''>{{ App.getLang() starts with 'zh' ? '全部文献' : 'All papers' }}</button>
+      </div>
+      <div class='card-header font-weight-bold border-top'>
+        <i class='fas fa-tags fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'Tags' : 'Tags' }}
+      </div>
+      <div class='literature-tags' data-literature-tags></div>
+    </aside>
+
+    <main class='card literature-list-panel'>
+      <div class='card-header d-flex align-items-center justify-content-between'>
+        <strong>{{ App.getLang() starts with 'zh' ? '文献列表' : 'Papers' }}</strong>
+        <span class='text-muted small' data-literature-count>0</span>
+      </div>
+      <div class='literature-list' data-literature-list>
+        <div class='literature-empty text-center text-muted py-5' data-literature-empty>
+          <i class='fas fa-book-open fa-3x mb-3'></i>
+          <div>{{ App.getLang() starts with 'zh' ? '暂无文献可显示' : 'No papers to display' }}</div>
+        </div>
+      </div>
+    </main>
+
+    <aside class='card literature-detail-panel'>
+      <div class='card-header font-weight-bold'>
+        <i class='fas fa-file-lines fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '文献详情 / 阅读卡片' : 'Paper details / reading card' }}
+      </div>
+      <div class='card-body' data-literature-detail>
+        <p class='text-muted mb-0'>{{ App.getLang() starts with 'zh' ? '选择一篇文献查看详情，并填写本地阅读卡片。' : 'Select a paper to inspect metadata and fill the local reading card.' }}</p>
+      </div>
+    </aside>
+  </div>
+
+  <div class='alert alert-danger mt-3' data-literature-error hidden></div>
 </div>
+
+<script defer src='/planner-assets/literature.js?v=20260619-zotero1'></script>
 {% endblock %}
