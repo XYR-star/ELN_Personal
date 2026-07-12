@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block body %}
 <link rel='stylesheet' href='/planner-assets/styles.css?v=20260617-init-guard1'>
+<link rel='stylesheet' href='/planner-assets/todos.css?v=20260624-todo1'>
 
 <div class='planner-embedded' data-planner-root data-api-base='/planner-api.php' data-lang='{{ plannerLang }}'>
   <section class='planner-actions-row'>
@@ -10,6 +11,40 @@
       <button id='next-button' class='btn btn-secondary' type='button' data-i18n='action.next'>下一页</button>
       <button id='new-plan-button' class='btn btn-primary' type='button' data-i18n='action.newPlan'>新建计划</button>
     </div>
+  </section>
+
+  <section class='planner-todos' data-todos-root data-todo-mode='editor' data-api-base='/planner-api.php'>
+    <div class='planner-todos-head'>
+      <div>
+        <h2><i class='fas fa-list-check mr-1'></i>Todo</h2>
+        <div class='text-muted small'>Mixed quick tasks for today, later, or no fixed date.</div>
+      </div>
+    </div>
+    <details class='todo-composer' data-todo-composer open>
+      <summary>{{ App.getLang() starts with 'zh' ? '添加待办' : 'Add todo' }}</summary>
+      <form class='todo-form' data-todo-form>
+        <input type='hidden' data-todo-id>
+        <label>Task
+          <input class='form-control' type='text' data-todo-title placeholder='Check cells, order primers...' required>
+        </label>
+        <label>Due date
+          <input class='form-control' type='date' data-todo-due-date>
+        </label>
+        <label>Note
+          <input class='form-control' type='text' data-todo-note placeholder='Optional'>
+        </label>
+        <label class='todo-pin-label'>
+          <input type='checkbox' data-todo-pinned> Pin
+        </label>
+        <div class='btn-group'>
+          <button class='btn btn-primary' type='submit' data-todo-save>Add todo</button>
+          <button class='btn btn-secondary' type='button' data-todo-cancel hidden>Cancel</button>
+        </div>
+      </form>
+      <div class='alert alert-danger py-2' data-todo-error hidden></div>
+    </details>
+    <div class='todo-list' data-todo-list></div>
+    <div class='text-muted' data-todo-empty hidden>No todos yet.</div>
   </section>
 
   <section class='planner-toolbar'>
@@ -77,4 +112,5 @@
 </dialog>
 
 <script type='module' src='/planner-assets/app.js?v=20260617-init-guard1'></script>
+<script defer src='/planner-assets/todos.js?v=20260624-todo1'></script>
 {% endblock %}

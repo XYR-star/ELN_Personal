@@ -5,6 +5,9 @@
 {% if Entity.entityType.value == 'experiments' or Entity.entityType.value == 'items' %}
 <link rel='stylesheet' href='/planner-assets/silverbullet-editor.css?v=20260620-evidence1'>
 {% endif %}
+{% if Entity.entityType.value == 'experiments' %}
+<link rel='stylesheet' href='/planner-assets/experiment-records.css?v=20260620-records1'>
+{% endif %}
 
 {% embed 'view-edit.html' %}
   {% block createnew %}
@@ -56,6 +59,10 @@
   {# TAGS #}
   {% include('edit-tags.html') %}
 
+  {% if Entity.entityType.value == 'experiments' or Entity.entityType.value == 'items' %}
+    {% include 'silverbullet-editor.html' %}
+  {% endif %}
+
   <section class='mobile-quick-upload mt-3 mb-3' data-mobile-quick-upload data-upload-endpoint='/api/v2/{{ Entity.entityType.value }}/{{ Entity.id }}/uploads'>
     <div class='d-flex flex-wrap align-items-center justify-content-between'>
       <div class='mb-2 mr-2'>
@@ -84,11 +91,8 @@
     {% include 'drive-links.html' %}
   {% endif %}
 
-  {% if Entity.entityType.value == 'experiments' or Entity.entityType.value == 'items' %}
-    {% include 'silverbullet-editor.html' %}
-  {% endif %}
-
   {# BODY #}
+  <div data-native-main-text-section>
   <hr>
   {% if Entity.entityData.hide_main_text %}
     <div>
@@ -144,9 +148,14 @@
       </div>
   </div>
   {% endif %}
+  </div>
 </section>
 
 <hr>
+{% if Entity.entityType.value == 'experiments' %}
+  {% include 'experiment-records.html' %}
+  <hr>
+{% endif %}
 {# EXTRA FIELDS #}
 {% include('field-builder-modal.html') %}
 <h3 data-action='toggle-next' data-opened-icon='fa-caret-down' data-closed-icon='fa-caret-right' class='d-inline togglable-section-title' tabindex='0' role='button' aria-expanded='true'><i class='fas fa-caret-down fa-fw mr-2'></i>{{ 'Extra fields'|trans }}</h3>
@@ -235,5 +244,8 @@
 <script defer src='/planner-assets/mobile-quick-upload.js?v=20260618-mobile-upload1'></script>
 {% if Entity.entityType.value == 'experiments' or Entity.entityType.value == 'items' %}
 <script defer src='/planner-assets/silverbullet-editor.js?v=20260620-evidence1'></script>
+{% endif %}
+{% if Entity.entityType.value == 'experiments' %}
+<script defer src='/planner-assets/experiment-records.js?v=20260620-records1'></script>
 {% endif %}
 {% endblock body %}

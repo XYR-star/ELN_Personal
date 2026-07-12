@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 
 {% block body %}
+{% if Entity.entityType.value == 'experiments' %}
+<link rel='stylesheet' href='/planner-assets/experiment-records.css?v=20260620-records1'>
+{% endif %}
 
 {% embed 'view-edit.html' %}
   {% block createnew %}
@@ -47,7 +50,7 @@
   {{ 'Locked by %s on %s at %s'|trans|format(lockerFullname, Entity.entityData.locked_at|date('Y-m-d'), Entity.entityData.locked_at|date('H:i:s'))|msg('ok', false) }}
 {% endif %}
 
-<section>
+<section class='entity-view-meta'>
 
   {# DATE #}
   {% if Entity.entityType.value != 'experiments_templates' %}
@@ -129,6 +132,11 @@
   {% endif %}
 
 </section>
+
+{% if Entity.entityType.value == 'experiments' %}
+  {% include 'experiment-records.html' %}
+  <hr>
+{% endif %}
 
 <section id='extraFieldsSection'>
 {# METADATA view #}
@@ -224,4 +232,7 @@
 >
 </div>
 
+{% if Entity.entityType.value == 'experiments' %}
+<script defer src='/planner-assets/experiment-records.js?v=20260620-records1'></script>
+{% endif %}
 {% endblock body %}

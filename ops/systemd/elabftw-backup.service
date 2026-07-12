@@ -1,0 +1,13 @@
+[Unit]
+Description=Back up eLabFTW database and runtime data
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/root/elabftw-planner/ops/backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true

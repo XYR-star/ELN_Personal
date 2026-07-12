@@ -147,6 +147,17 @@ Run unit tests:
 npm test
 ```
 
+Run the non-destructive deployment preflight before an eLabFTW upgrade:
+
+```bash
+npm run preflight
+```
+
+The preflight checks unit tests, the Compose configuration, container health,
+the Planner API, mounted overrides, and the upstream template baseline. See
+[`ARCHITECTURE.md`](ARCHITECTURE.md) for extension boundaries and the upgrade
+procedure.
+
 Run browser smoke tests against the deployed eLabFTW instance:
 
 ```bash
@@ -208,3 +219,14 @@ These customizations are intentionally shallow:
 - Runtime data remains in the eLabFTW database and data volume.
 
 To roll back the personal navigation cleanup, restore the previous `head.html` override or remove the override file from the eLabFTW data directory.
+
+## Operations
+
+The production Compose file pins images by digest. Update those digests only
+after `npm run preflight` reports that the four upstream templates still match
+the recorded baseline and the browser tests pass.
+
+`ops/backup.sh` creates a consistent MySQL dump plus archives of uploads and
+custom runtime data. It validates every generated archive and removes backup
+sets older than the configured retention period. The sample systemd units in
+`ops/systemd/` run it daily without restarting the ELN.

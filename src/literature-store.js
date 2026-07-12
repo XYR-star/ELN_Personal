@@ -60,6 +60,14 @@ export function isAnnotatableAttachmentKind(kind = '') {
   return ['pdf', 'image', 'html'].includes(String(kind || '').toLowerCase());
 }
 
+export function sanitizeHtmlPreview(rawHtml = '') {
+  return String(rawHtml || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object\b[^>]*>[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed\b[^>]*>/gi, '');
+}
+
 function authorSummary(creators = []) {
   const names = Array.isArray(creators) ? creators.filter(Boolean) : [];
   if (!names.length) return '';

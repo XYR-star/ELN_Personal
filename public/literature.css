@@ -50,6 +50,20 @@
   min-height: 460px;
 }
 
+.literature-empty {
+  max-width: 460px;
+  margin: 0 auto;
+  padding-right: 1rem;
+  padding-left: 1rem;
+}
+
+.literature-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  justify-content: center;
+}
+
 .literature-item {
   width: 100%;
   padding: .85rem 1rem;

@@ -3,8 +3,9 @@ import { access, mkdir } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PlannerStore } from './store.js';
+import { PlannerStore, TodoStore } from './store.js';
 import { PLAN_STATUSES, PLAN_TYPES } from './planner.js';
+import { dashboardTodos } from './todos.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, '..', 'public');
@@ -12,6 +13,7 @@ const dataDir = process.env.PLANNER_DATA_DIR || '/www/elabftw-data/planner';
 const port = Number(process.env.PORT || 4044);
 const host = process.env.HOST || '127.0.0.1';
 const store = new PlannerStore(path.join(dataDir, 'plans.json'));
+const todoStore = new TodoStore(path.join(dataDir, 'todos.json'));
 
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -72,6 +74,19 @@ async function handleApi(req, res) {
     if (url.pathname === '/api/meta') {
       return sendJson(res, 200, { types: PLAN_TYPES, statuses: PLAN_STATUSES });
     }
+    if (url.pathname === '/api/todos' && req.method === 'GET') {
+      const today = url.searchParams.get('today') || undefined;
+      const todos = await todoStore.list({ today });
+      if (url.searchParams.get('scope') === 'dashboard') {
+        const limit = Number(url.searchParams.get('limit') || 5);
+        return sendJson(res, 200, dashboardTodos(todos, today, Number.isFinite(limit) ? limit : 5));
+      }
+      return sendJson(res, 200, todos);
+    }
+    if (url.pathname === '/api/todos' && req.method === 'POST') {
+      const todo = await todoStore.create(await readBody(req));
+      return sendJson(res, 201, todo);
+    }
     if (url.pathname === '/api/plans' && req.method === 'GET') {
       const plans = await store.list({
         start: url.searchParams.get('start'),
@@ -92,6 +107,19 @@ async function handleApi(req, res) {
     }
     if (match && req.method === 'DELETE') {
       await store.delete(match[1]);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    const todoMatch = url.pathname.match(/^\/api\/todos\/([0-9a-f-]+)$/);
+    if (todoMatch && req.method === 'GET') {
+      return sendJson(res, 200, await todoStore.get(todoMatch[1]));
+    }
+    if (todoMatch && req.method === 'PATCH') {
+      return sendJson(res, 200, await todoStore.update(todoMatch[1], await readBody(req)));
+    }
+    if (todoMatch && req.method === 'DELETE') {
+      await todoStore.delete(todoMatch[1]);
       res.writeHead(204);
       res.end();
       return;

@@ -1,0 +1,186 @@
+.experiment-records-panel {
+  margin-left: 1.9rem;
+}
+
+.experiment-records-list {
+  display: grid;
+  gap: .65rem;
+}
+
+.experiment-record-card {
+  display: flex;
+  gap: .75rem;
+  align-items: stretch;
+  justify-content: space-between;
+  padding: .85rem 1rem;
+  background: #fff;
+  border: 1px solid #d5dde3;
+  border-left: 5px solid #29aeb9;
+  border-radius: 4px;
+}
+
+.experiment-record-card:hover {
+  border-color: #b8c6cf;
+}
+
+.experiment-record-card-main {
+  min-width: 0;
+}
+
+.experiment-record-card-title {
+  color: #343a40;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.experiment-record-meta,
+.experiment-record-summary {
+  color: #6c757d;
+  font-size: .9rem;
+}
+
+.experiment-record-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: .25rem .25rem 0 0;
+  padding: .12rem .4rem;
+  color: #495057;
+  background: #f1f3f5;
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+  font-size: .85rem;
+  font-weight: 700;
+}
+
+.experiment-records-empty {
+  padding: 1rem;
+  border: 1px dashed #d5dde3;
+  border-radius: 4px;
+}
+
+.experiment-records-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+}
+
+.experiment-records-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .32);
+}
+
+.experiment-records-modal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  margin: 18px auto;
+  background: #f8f9fa;
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .24);
+}
+
+.experiment-records-modal-header,
+.experiment-records-modal-footer {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  background: #fff;
+  border-bottom: 1px solid #d5dde3;
+}
+
+.experiment-records-modal-footer {
+  border-top: 1px solid #d5dde3;
+  border-bottom: 0;
+}
+
+.experiment-records-modal-body {
+  overflow: auto;
+  padding: 1rem 1.2rem;
+}
+
+.experiment-records-editor-labels {
+  display: grid;
+  grid-template-columns: minmax(280px, .8fr) minmax(320px, 1.2fr);
+  gap: .75rem;
+  margin-bottom: .35rem;
+  color: #6c757d;
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.experiment-records-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .75rem;
+}
+
+.experiment-records-editor-grid.is-source-open {
+  grid-template-columns: minmax(280px, .8fr) minmax(320px, 1.2fr);
+}
+
+.experiment-records-source {
+  min-height: 430px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.experiment-records-preview {
+  min-height: 430px;
+  padding: 1rem;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+  line-height: 1.58;
+  outline: none;
+}
+
+.experiment-records-preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: .75rem 0;
+  border: 1px solid #d5dde3;
+  border-radius: 4px;
+}
+
+.experiment-records-preview code {
+  padding: .1rem .25rem;
+  background: #f1f3f5;
+  border-radius: 3px;
+}
+
+@media (max-width: 767.98px) {
+  .experiment-records-panel {
+    margin-left: 0;
+  }
+
+  .experiment-record-card {
+    flex-direction: column;
+  }
+
+  .experiment-records-modal-panel {
+    width: 100vw;
+    max-height: 100vh;
+    height: 100vh;
+    margin: 0;
+  }
+
+  .experiment-records-editor-grid.is-source-open {
+    grid-template-columns: 1fr;
+  }
+
+  .experiment-records-editor-labels {
+    display: none;
+  }
+
+  .experiment-records-preview,
+  .experiment-records-source {
+    min-height: 55vh;
+  }
+}

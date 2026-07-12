@@ -1,0 +1,102 @@
+<section class='experiment-records mt-3 mb-3' data-experiment-records-root data-experiment-id='{{ Entity.id }}' data-api-base='/experiment-records-api.php'>
+  <div class='d-flex align-items-center justify-content-between flex-wrap mb-2'>
+    <h3 data-action='toggle-next' data-opened-icon='fa-caret-down' data-closed-icon='fa-caret-right' class='d-inline togglable-section-title mb-2' tabindex='0' role='button' aria-expanded='true'>
+      <i class='fas fa-caret-down fa-fw mr-2'></i>Records
+    </h3>
+    {% if not Entity.isReadOnly %}
+    <button type='button' class='btn btn-primary mb-2' data-record-new>
+      <i class='fas fa-plus fa-fw mr-1'></i>New record
+    </button>
+    {% endif %}
+  </div>
+
+  <div class='experiment-records-panel' data-save-hidden='experimentRecordsDiv'>
+    <div class='text-muted small mb-2'>Individual runs, observations, images, attachments, and cross-references for this experiment.</div>
+    <div class='alert alert-danger py-2' data-record-error hidden></div>
+    <div class='experiment-records-list' data-record-list></div>
+    <div class='experiment-records-empty text-muted' data-record-empty hidden>No records yet.</div>
+  </div>
+
+  {% if not Entity.isReadOnly %}
+  <div class='experiment-records-modal' data-record-modal hidden role='dialog' aria-modal='true' aria-label='Experiment record editor'>
+    <div class='experiment-records-modal-backdrop' data-record-close></div>
+    <div class='experiment-records-modal-panel'>
+      <div class='experiment-records-modal-header'>
+        <div>
+          <h2 class='mb-0' data-record-modal-title>New record</h2>
+          <div class='text-muted small'>Saved as a Markdown file under this experiment.</div>
+        </div>
+        <button type='button' class='btn btn-secondary' data-record-close aria-label='Close'>
+          <i class='fas fa-times fa-fw'></i>
+        </button>
+      </div>
+
+      <div class='experiment-records-modal-body'>
+        <input type='hidden' data-record-id>
+        <div class='form-row'>
+          <div class='form-group col-md-5'>
+            <label>Title</label>
+            <input type='text' class='form-control' data-record-title placeholder='Cell passage, FACS run, cloning step...'>
+          </div>
+          <div class='form-group col-md-3'>
+            <label>Date</label>
+            <input type='date' class='form-control' data-record-date>
+          </div>
+          <div class='form-group col-md-4'>
+            <label>Type</label>
+            <select class='form-control' data-record-type>
+              <option value='other'>Other</option>
+              <option value='cell_passage'>Cell passage</option>
+              <option value='transfection'>Transfection</option>
+              <option value='pcr'>PCR</option>
+              <option value='cloning'>Cloning</option>
+              <option value='facs'>FACS</option>
+              <option value='imaging'>Imaging</option>
+              <option value='analysis'>Analysis</option>
+            </select>
+          </div>
+        </div>
+
+        <div class='d-flex justify-content-between align-items-center flex-wrap mb-2'>
+          <div class='btn-group mb-2' role='group' aria-label='Insert references'>
+            <button type='button' class='btn btn-secondary btn-sm' data-record-insert='[[Resource:]]'>Resource</button>
+            <button type='button' class='btn btn-secondary btn-sm' data-record-insert='[[Idea:]]'>Idea</button>
+            <button type='button' class='btn btn-secondary btn-sm' data-record-insert='[[Evidence:#]]'>Evidence</button>
+            <button type='button' class='btn btn-secondary btn-sm' data-record-insert='[[PaperAnnotation:#]]'>Annotation</button>
+          </div>
+          <div class='btn-group mb-2' role='group' aria-label='Record tools'>
+            <button type='button' class='btn btn-secondary btn-sm' data-record-toggle-source>
+              <i class='fas fa-code fa-fw mr-1'></i>Hide source
+            </button>
+            <button type='button' class='btn btn-secondary btn-sm' data-record-upload-trigger>
+              <i class='fas fa-paperclip fa-fw mr-1'></i>Upload
+            </button>
+          </div>
+          <input type='file' class='d-none' data-record-upload multiple>
+        </div>
+
+        <div class='experiment-records-editor-labels'>
+          <span>Markdown source</span>
+          <span>Live preview</span>
+        </div>
+        <div class='experiment-records-editor-grid is-source-open'>
+          <textarea class='form-control experiment-records-source' data-record-markdown aria-label='Record Markdown source'></textarea>
+          <div class='experiment-records-preview' data-record-preview role='document' aria-label='Record Markdown preview'></div>
+        </div>
+
+        <div class='small mt-2' data-record-status></div>
+      </div>
+
+      <div class='experiment-records-modal-footer'>
+        <button type='button' class='btn btn-danger mr-auto' data-record-delete hidden>
+          <i class='fas fa-trash fa-fw mr-1'></i>Delete
+        </button>
+        <button type='button' class='btn btn-secondary' data-record-close>Cancel</button>
+        <button type='button' class='btn btn-primary' data-record-save>
+          <i class='fas fa-save fa-fw mr-1'></i>Save
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</section>

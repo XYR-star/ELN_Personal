@@ -16,12 +16,14 @@
   const configPath = root.querySelector('[data-literature-config-path]');
   const errorBox = root.querySelector('[data-literature-error]');
   const refreshButton = root.querySelector('[data-literature-refresh]');
+  const emptyRefreshButton = root.querySelector('[data-literature-empty-refresh]');
   const configButton = root.querySelector('[data-literature-config]');
   const configDialog = root.querySelector('[data-literature-config-dialog]');
   const configForm = root.querySelector('[data-literature-config-form]');
   const configStatus = root.querySelector('[data-literature-config-status]');
   const configError = root.querySelector('[data-literature-config-error]');
   const newPaperButton = root.querySelector('[data-literature-new-paper]');
+  const emptyNewPaperButton = root.querySelector('[data-literature-empty-new-paper]');
   const paperDialog = root.querySelector('[data-literature-paper-dialog]');
   const paperForm = root.querySelector('[data-literature-paper-form]');
   const paperError = root.querySelector('[data-literature-paper-error]');
@@ -32,7 +34,7 @@
   const pdfCanvasWrap = root.querySelector('[data-literature-pdf-canvas-wrap]');
   const pdfCanvas = root.querySelector('[data-literature-pdf-canvas]');
   const attachmentImage = root.querySelector('[data-literature-attachment-image]');
-  const attachmentHtml = root.querySelector('[data-literature-attachment-html]');
+  let attachmentHtml = root.querySelector('[data-literature-attachment-html]');
   const pdfOverlay = root.querySelector('[data-literature-pdf-overlay]');
   const pdfPageLabel = root.querySelector('[data-literature-pdf-page]');
   const pdfToolButtons = root.querySelectorAll('[data-literature-pdf-tool]');
@@ -599,6 +601,11 @@
   }
 
   function htmlPreviewDocument(rawHtml = '') {
+    const sanitizedHtml = String(rawHtml || '')
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '')
+      .replace(/<object\b[^>]*>[\s\S]*?<\/object>/gi, '')
+      .replace(/<embed\b[^>]*>/gi, '');
     const baseStyle = `
       <style>
         html, body { margin: 0; padding: 16px; background: #fff; color: #212529; font-family: Arial, sans-serif; }
@@ -606,9 +613,22 @@
         pre { white-space: pre-wrap; }
       </style>
     `;
-    return rawHtml.includes('</head>')
-      ? rawHtml.replace('</head>', `${baseStyle}</head>`)
-      : `${baseStyle}${rawHtml}`;
+    return sanitizedHtml.includes('</head>')
+      ? sanitizedHtml.replace('</head>', `${baseStyle}</head>`)
+      : `${baseStyle}${sanitizedHtml}`;
+  }
+
+  function ensureAttachmentHtml() {
+    if (attachmentHtml) return attachmentHtml;
+    if (!pdfCanvasWrap || !pdfOverlay) return null;
+    attachmentHtml = document.createElement('iframe');
+    attachmentHtml.className = 'literature-attachment-html';
+    attachmentHtml.dataset.literatureAttachmentHtml = '';
+    attachmentHtml.setAttribute('sandbox', 'allow-same-origin');
+    attachmentHtml.setAttribute('title', 'HTML snapshot preview');
+    attachmentHtml.hidden = true;
+    pdfCanvasWrap.insertBefore(attachmentHtml, pdfOverlay);
+    return attachmentHtml;
   }
 
   function renderHtmlPage() {
@@ -657,7 +677,8 @@
   }
 
   async function loadHtmlAttachment(attachment) {
-    if (!attachment?.preview_url || !attachmentHtml) return;
+    const htmlFrame = ensureAttachmentHtml();
+    if (!attachment?.preview_url || !htmlFrame) return;
     if (pdfState.viewKind !== 'html') pdfState.scale = 1;
     pdfState.selectedAttachment = attachment;
     pdfState.page = 1;
@@ -668,12 +689,12 @@
     if (!response.ok) throw new Error(isZh ? 'HTML 快照加载失败。' : 'Could not load HTML snapshot.');
     const rawHtml = await response.text();
     await new Promise((resolve) => {
-      attachmentHtml.onload = () => {
+      htmlFrame.onload = () => {
         renderHtmlPage();
         setTimeout(renderHtmlPage, 250);
         resolve();
       };
-      attachmentHtml.srcdoc = htmlPreviewDocument(rawHtml);
+      htmlFrame.srcdoc = htmlPreviewDocument(rawHtml);
     });
   }
 
@@ -1093,6 +1114,7 @@
   });
 
   refreshButton.addEventListener('click', load);
+  emptyRefreshButton?.addEventListener('click', load);
   configButton?.addEventListener('click', openConfigDialog);
   root.querySelectorAll('[data-literature-config-close]').forEach((button) => {
     button.addEventListener('click', closeConfigDialog);
@@ -1116,7 +1138,7 @@
       setConfigError(error.message || 'Could not save Zotero config.');
     }
   });
-  newPaperButton?.addEventListener('click', () => {
+  const openPaperDialog = () => {
     if (!paperDialog || !paperForm) return;
     paperForm.reset();
     if (paperError) paperError.hidden = true;
@@ -1125,7 +1147,9 @@
     } else {
       paperDialog.setAttribute('open', '');
     }
-  });
+  };
+  newPaperButton?.addEventListener('click', openPaperDialog);
+  emptyNewPaperButton?.addEventListener('click', openPaperDialog);
   root.querySelectorAll('[data-literature-paper-close]').forEach((button) => {
     button.addEventListener('click', () => {
       if (typeof paperDialog?.close === 'function') paperDialog.close();

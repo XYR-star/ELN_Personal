@@ -78,7 +78,7 @@ if (existsSync(authFile)) {
   test.use({ storageState: authFile });
 }
 
-test('experiment edit page exposes a local diagram panel above main text', async ({ page }) => {
+test('experiment edit page exposes a local diagram panel after the primary editor', async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
@@ -89,19 +89,19 @@ test('experiment edit page exposes a local diagram panel above main text', async
 
     await expect(page.locator('[data-experiment-diagram-root]')).toBeVisible();
     await expect(page.locator('[data-experiment-diagram-root]')).toContainText(/Experiment diagram|实验流程图/);
-    const mainTextHeading = page.locator('h3[role="button"]').filter({ hasText: /Main text|正文|主要文本/i });
-    await expect(mainTextHeading).toBeVisible();
+    const editor = page.locator('[data-silverbullet-editor-root]');
+    await expect(editor).toBeVisible();
 
     const diagramTop = await page.locator('[data-experiment-diagram-root]').boundingBox();
-    const bodyTop = await mainTextHeading.boundingBox();
-    expect(diagramTop?.y).toBeLessThan(bodyTop?.y ?? 0);
+    const editorTop = await editor.boundingBox();
+    expect(editorTop?.y).toBeLessThan(diagramTop?.y ?? 0);
     expect(errors).toEqual([]);
   } finally {
     await deleteTempExperiment(page, experimentId);
   }
 });
 
-test('experiment edit page exposes a SilverBullet-style markdown editor before native main text', async ({ page }) => {
+test('experiment edit page uses the SilverBullet-style editor as the primary main text', async ({ page }) => {
   const errors = collectPageErrors(page);
   await page.goto('/dashboard.php', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
@@ -131,10 +131,13 @@ test('experiment edit page exposes a SilverBullet-style markdown editor before n
     await editablePreview.fill('Direct preview edit\n\nlinked [[Resource:11]]');
     await expect(editor.locator('[data-silverbullet-markdown]')).toHaveValue(/Direct preview edit/);
 
-    const mainTextHeading = page.locator('h3[role="button"]').filter({ hasText: /Main text|正文|主要文本/i });
-    const editorTop = await editor.boundingBox();
-    const bodyTop = await mainTextHeading.boundingBox();
-    expect(editorTop?.y).toBeLessThan(bodyTop?.y ?? 0);
+    const nativeMainText = page.locator('[data-native-main-text-section]');
+    await expect(nativeMainText).toBeHidden();
+    const editorComesFirst = await editor.evaluate((element) => {
+      const native = document.querySelector('[data-native-main-text-section]');
+      return Boolean(native && (element.compareDocumentPosition(native) & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    expect(editorComesFirst).toBe(true);
     expect(errors).toEqual([]);
   } finally {
     await deleteTempExperiment(page, experimentId);

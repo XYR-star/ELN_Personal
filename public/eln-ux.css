@@ -1,0 +1,27 @@
+@media (max-width: 767.98px) {
+  .real-container > .d-flex.align-items-center.flex-wrap {
+    gap: .25rem;
+  }
+
+  .real-container > .d-flex.align-items-center.flex-wrap .btn {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0 !important;
+  }
+
+  .real-container > .d-flex.align-items-center.flex-wrap > .ml-auto {
+    width: 100%;
+    margin-top: .25rem;
+    margin-left: 0 !important;
+    padding-top: .25rem;
+    border-top: 1px solid #dee2e6;
+  }
+
+  .entity-view-meta .edit-mode-label {
+    min-width: 78px;
+    margin-right: .5rem;
+  }
+}

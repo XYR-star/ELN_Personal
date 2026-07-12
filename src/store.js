@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createPlan, filterPlansByRange, updatePlan } from './planner.js';
+import { createTodo, sortTodos, updateTodo } from './todos.js';
 
 export class PlannerStore {
   constructor(filePath) {
@@ -67,5 +68,72 @@ export class PlannerStore {
     const next = data.plans.filter((item) => item.id !== id);
     if (next.length === data.plans.length) throw new Error('plan not found');
     await this.writeData({ plans: next });
+  }
+}
+
+export class TodoStore {
+  constructor(filePath) {
+    this.filePath = filePath;
+    this.writeQueue = Promise.resolve();
+  }
+
+  async ensureFile() {
+    await mkdir(path.dirname(this.filePath), { recursive: true });
+    try {
+      await readFile(this.filePath, 'utf8');
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      await writeFile(this.filePath, JSON.stringify({ todos: [] }, null, 2));
+    }
+  }
+
+  async readData() {
+    await this.ensureFile();
+    const raw = await readFile(this.filePath, 'utf8');
+    const data = JSON.parse(raw || '{}');
+    return { todos: Array.isArray(data.todos) ? data.todos : [] };
+  }
+
+  async writeData(data) {
+    await this.ensureFile();
+    this.writeQueue = this.writeQueue.then(() => writeFile(this.filePath, JSON.stringify(data, null, 2)));
+    await this.writeQueue;
+  }
+
+  async list({ today } = {}) {
+    const data = await this.readData();
+    return sortTodos(data.todos, today);
+  }
+
+  async get(id) {
+    const data = await this.readData();
+    const todo = data.todos.find((item) => item.id === id);
+    if (!todo) throw new Error('todo not found');
+    return todo;
+  }
+
+  async create(input) {
+    const data = await this.readData();
+    const todo = createTodo(input);
+    data.todos.push(todo);
+    await this.writeData(data);
+    return todo;
+  }
+
+  async update(id, input) {
+    const data = await this.readData();
+    const index = data.todos.findIndex((item) => item.id === id);
+    if (index === -1) throw new Error('todo not found');
+    const todo = updateTodo(data.todos[index], input);
+    data.todos[index] = todo;
+    await this.writeData(data);
+    return todo;
+  }
+
+  async delete(id) {
+    const data = await this.readData();
+    const next = data.todos.filter((item) => item.id !== id);
+    if (next.length === data.todos.length) throw new Error('todo not found');
+    await this.writeData({ todos: next });
   }
 }

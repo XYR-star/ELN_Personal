@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/literature.css?v=20260620-annotate4'>
+<link rel='stylesheet' href='/planner-assets/literature.css?v=20260620-annotate5'>
 
 <div class='literature-workspace' data-literature-root data-api-base='/literature-api.php' data-lang='{{ App.getLang() }}'>
   <div class='alert alert-info literature-setup' data-literature-setup hidden>
@@ -30,9 +30,8 @@
         </div>
       </form>
       <div class='btn-group ml-lg-auto mt-2 mt-lg-0'>
-        <button type='button' class='btn btn-secondary' data-literature-refresh><i class='fas fa-rotate fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '刷新' : 'Refresh' }}</button>
-        <button type='button' class='btn btn-primary' data-literature-new-paper><i class='fas fa-plus fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '本地文献' : 'Local paper' }}</button>
-        <a class='btn btn-secondary' href='https://www.zotero.org/' target='_blank' rel='noopener'><i class='fas fa-arrow-up-right-from-square fa-fw mr-1'></i>Zotero</a>
+        <button type='button' class='btn btn-primary' data-literature-refresh><i class='fas fa-rotate fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '同步 Zotero' : 'Sync Zotero' }}</button>
+        <button type='button' class='btn btn-secondary' data-literature-new-paper><i class='fas fa-plus fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '添加本地文献' : 'Add local paper' }}</button>
         <button type='button' class='btn btn-secondary' data-literature-config><i class='fas fa-key fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'API 配置' : 'API config' }}</button>
       </div>
     </div>
@@ -60,7 +59,12 @@
       <div class='literature-list' data-literature-list>
         <div class='literature-empty text-center text-muted py-5' data-literature-empty>
           <i class='fas fa-book-open fa-3x mb-3'></i>
-          <div>{{ App.getLang() starts with 'zh' ? '暂无文献可显示' : 'No papers to display' }}</div>
+          <h3 class='h5 text-dark'>{{ App.getLang() starts with 'zh' ? '文献库还是空的' : 'Your literature library is empty' }}</h3>
+          <p class='mb-3'>{{ App.getLang() starts with 'zh' ? '先从 Zotero 同步；暂时不用 Zotero 时，也可以添加一篇本地文献。' : 'Sync from Zotero first, or add a local paper when Zotero is not in use.' }}</p>
+          <div class='literature-empty-actions'>
+            <button type='button' class='btn btn-primary' data-literature-empty-refresh><i class='fas fa-rotate fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '同步 Zotero' : 'Sync Zotero' }}</button>
+            <button type='button' class='btn btn-secondary' data-literature-empty-new-paper><i class='fas fa-plus fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '添加本地文献' : 'Add local paper' }}</button>
+          </div>
         </div>
       </div>
     </main>
@@ -219,7 +223,6 @@
         <div class='literature-pdf-canvas-wrap' data-literature-pdf-canvas-wrap>
           <canvas data-literature-pdf-canvas></canvas>
           <img class='literature-attachment-image' data-literature-attachment-image hidden alt=''>
-          <iframe class='literature-attachment-html' data-literature-attachment-html sandbox='allow-same-origin' hidden title='HTML snapshot preview'></iframe>
           <div class='literature-pdf-overlay' data-literature-pdf-overlay></div>
         </div>
       </main>
@@ -227,5 +230,5 @@
   </dialog>
 </div>
 
-<script defer src='/planner-assets/literature.js?v=20260620-annotate4'></script>
+<script defer src='/planner-assets/literature.js?v=20260620-annotate5'></script>
 {% endblock %}

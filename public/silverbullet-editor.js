@@ -17,6 +17,7 @@
   const entityType = root.dataset.entityType || 'experiments';
   const entityId = root.dataset.entityId || '';
   const mainTextDiv = document.querySelector('#mainTextDiv');
+  const nativeMainTextSection = document.querySelector('[data-native-main-text-section]');
 
   function csrfHeaders(hasBody = false) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -192,7 +193,7 @@
       setStatus(error.message || 'Could not load Markdown source.', true);
     }
     refreshPreview();
-    mainTextDiv.hidden = true;
+    if (nativeMainTextSection) nativeMainTextSection.hidden = true;
   }
 
   async function saveMarkdown() {
@@ -233,7 +234,11 @@
     if (event.target === helpDialog) helpDialog.close();
   });
   nativeButton?.addEventListener('click', () => {
-    mainTextDiv.hidden = !mainTextDiv.hidden;
+    if (!nativeMainTextSection) return;
+    nativeMainTextSection.hidden = !nativeMainTextSection.hidden;
+    if (!nativeMainTextSection.hidden) {
+      nativeMainTextSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
   saveButton?.addEventListener('click', saveMarkdown);
   textarea?.addEventListener('input', () => {

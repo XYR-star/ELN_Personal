@@ -14,6 +14,7 @@ import {
   normalizeLiteraturePaper,
   normalizeAttachmentKind,
   normalizeZoteroItem,
+  sanitizeHtmlPreview,
   formatEvidenceMarkdown,
   tagsFromVisibleItems,
 } from '../src/literature-store.js';
@@ -82,6 +83,16 @@ test('isAnnotatableAttachmentKind allows pdf, image, and html previews only', ()
   assert.equal(isAnnotatableAttachmentKind('image'), true);
   assert.equal(isAnnotatableAttachmentKind('html'), true);
   assert.equal(isAnnotatableAttachmentKind('other'), false);
+});
+
+test('sanitizeHtmlPreview removes active content before sandbox preview', () => {
+  const sanitized = sanitizeHtmlPreview('<h1>Snapshot</h1><script>alert(1)</script><iframe src="x"></iframe><object data="x"></object><embed src="x">');
+
+  assert.match(sanitized, /<h1>Snapshot<\/h1>/);
+  assert.doesNotMatch(sanitized, /script/i);
+  assert.doesNotMatch(sanitized, /iframe/i);
+  assert.doesNotMatch(sanitized, /object/i);
+  assert.doesNotMatch(sanitized, /embed/i);
 });
 
 test('LiteratureCardStore persists local reading cards', async () => {
