@@ -289,84 +289,106 @@
     const item = state.items.find((candidate) => candidate.key === state.selectedKey);
     detail.replaceChildren();
     if (!item) {
-      detail.append(text('p', 'text-muted mb-0', isZh ? '选择一篇文献查看详情，并填写本地阅读卡片。' : 'Select a paper to inspect metadata and fill the local reading card.'));
+      detail.className = 'literature-welcome';
+      const icon = document.createElement('div');
+      icon.className = 'literature-welcome-icon';
+      icon.innerHTML = '<i class="fas fa-book-open"></i>';
+      detail.append(icon);
+      detail.append(text('h3', '', isZh ? '选择一篇论文开始阅读' : 'Choose a paper to begin'));
+      detail.append(text('p', '', isZh ? '原文、阅读笔记和证据摘录会集中显示在这里。' : 'The paper, your notes, and captured evidence will stay together here.'));
       return;
     }
+    detail.className = 'literature-paper-workspace';
     const card = cardFor(item.key);
-    detail.append(text('div', 'literature-detail-title', item.title));
-    detail.append(text('div', 'literature-meta mt-1', itemSubtitle(item)));
+
+    const paperHead = document.createElement('header');
+    paperHead.className = 'literature-paper-head';
+    const headingRow = document.createElement('div');
+    headingRow.className = 'literature-paper-heading-row';
+    const heading = document.createElement('div');
+    heading.append(text('div', 'literature-detail-title', item.title));
+    heading.append(text('div', 'literature-meta mt-2', itemSubtitle(item)));
+    headingRow.append(heading);
+
     const actions = document.createElement('div');
-    actions.className = 'btn-group flex-wrap mt-3';
-    [linkButton('Zotero', item.zoteroUrl, 'fas fa-arrow-up-right-from-square'), linkButton('DOI', item.doi ? `https://doi.org/${item.doi}` : '', 'fas fa-fingerprint'), linkButton(isZh ? '原文链接' : 'URL', item.url, 'fas fa-link')].filter(Boolean).forEach((node) => actions.append(node));
+    actions.className = 'literature-paper-actions';
     const pdfButton = document.createElement('button');
     pdfButton.type = 'button';
-    pdfButton.className = 'btn btn-primary btn-sm';
+    pdfButton.className = 'btn btn-primary';
     pdfButton.dataset.literatureOpenPdf = item.key;
-    pdfButton.innerHTML = `<i class="fas fa-highlighter fa-fw mr-1"></i>${isZh ? '附件标注' : 'Annotate files'}`;
+    pdfButton.innerHTML = `<i class="fas fa-book-open fa-fw mr-1"></i>${isZh ? '阅读附件' : 'Read attachment'}`;
     actions.append(pdfButton);
-    if (actions.childElementCount) detail.append(actions);
+    [linkButton('Zotero', item.zoteroUrl, 'fas fa-arrow-up-right-from-square'), linkButton('DOI', item.doi ? `https://doi.org/${item.doi}` : '', 'fas fa-fingerprint'), linkButton(isZh ? '原文' : 'URL', item.url, 'fas fa-link')].filter(Boolean).forEach((node) => actions.append(node));
+    headingRow.append(actions);
+    paperHead.append(headingRow);
     if (item.abstractNote) {
-      detail.append(text('h3', 'h5 mt-4', 'Abstract'));
-      detail.append(text('p', 'small', item.abstractNote));
+      const abstract = document.createElement('details');
+      abstract.className = 'literature-abstract';
+      abstract.innerHTML = `<summary>${isZh ? '查看摘要' : 'View abstract'}</summary>`;
+      abstract.append(text('p', 'mt-2 mb-0', item.abstractNote));
+      paperHead.append(abstract);
     }
+    detail.append(paperHead);
+
+    const noteGrid = document.createElement('div');
+    noteGrid.className = 'literature-note-grid';
+
+    const form = document.createElement('form');
+    form.className = 'literature-card-form literature-work-section';
+    form.dataset.literatureCardForm = item.key;
+    form.innerHTML = `
+      <div class="literature-section-head">
+        <h3 class="h5 mb-0"><i class="fas fa-note-sticky fa-fw mr-1"></i>${isZh ? '研究笔记' : 'Research notes'}</h3>
+        <button type="submit" class="btn btn-secondary btn-sm"><i class="fas fa-save fa-fw mr-1"></i>${isZh ? '保存' : 'Save'}</button>
+      </div>
+      <div class="literature-card-status-row">
+        <label>${isZh ? '状态' : 'Status'}
+          <select class="form-control" name="status">
+            <option value="unread">${statusLabel('unread')}</option>
+            <option value="reading">${statusLabel('reading')}</option>
+            <option value="read">${statusLabel('read')}</option>
+            <option value="important">${statusLabel('important')}</option>
+          </select>
+        </label>
+        <label>${isZh ? '核心结论' : 'Key takeaway'}
+          <input class="form-control" name="summary" placeholder="${isZh ? '用一句话写下这篇论文对你的价值' : 'One sentence on why this paper matters'}">
+        </label>
+      </div>
+      <label>${isZh ? '阅读笔记 / 实验启发' : 'Notes / experimental context'}
+        <textarea class="form-control" name="note" rows="7" placeholder="${isZh ? '记录你的理解、疑问、可复现的方法和下一步实验。' : 'Capture your interpretation, questions, methods to reproduce, and next experiment.'}"></textarea>
+      </label>
+      <div class="literature-card-links">
+        <label>${isZh ? '关联实验 ID' : 'Experiment IDs'}
+          <input class="form-control" name="linked_experiments" placeholder="12, 18">
+        </label>
+        <label>${isZh ? '关联资源 ID' : 'Resource IDs'}
+          <input class="form-control" name="linked_resources" placeholder="11, 24">
+        </label>
+      </div>
+    `;
+    form.elements.status.value = card.status;
+    form.elements.summary.value = card.summary || '';
+    form.elements.note.value = card.note || '';
+    form.elements.linked_experiments.value = card.linked_experiments.join(', ');
+    form.elements.linked_resources.value = card.linked_resources.join(', ');
+    noteGrid.append(form);
 
     const evidenceSection = document.createElement('section');
-    evidenceSection.className = 'literature-evidence mt-4';
+    evidenceSection.className = 'literature-work-section';
     const evidenceCards = evidenceFor(item.key);
     const evidenceHead = document.createElement('div');
     evidenceHead.className = 'literature-section-head';
-    evidenceHead.append(text('h3', 'h5 mb-0', isZh ? '摘录工作台' : 'Quote workspace'));
+    const evidenceTitle = document.createElement('h3');
+    evidenceTitle.className = 'h5 mb-0';
+    evidenceTitle.innerHTML = `<i class="fas fa-quote-left fa-fw mr-1"></i>${isZh ? '证据摘录' : 'Evidence'}`;
+    evidenceHead.append(evidenceTitle);
     evidenceHead.append(text('span', 'badge badge-light', `${evidenceCards.length} ${isZh ? '条' : 'saved'}`));
     evidenceSection.append(evidenceHead);
-    const intro = text('p', 'text-muted small', isZh
-      ? '边看文献边保存原句、图注或关键发现；复制 Markdown 块后可直接粘到实验/资源记录里。'
-      : 'Capture a quote, figure caption, or finding while reading; copy the Markdown block into experiments/resources.');
-    evidenceSection.append(intro);
-
-    const evidenceForm = document.createElement('form');
-    evidenceForm.className = 'literature-evidence-form';
-    evidenceForm.dataset.literatureEvidenceForm = item.key;
-    evidenceForm.innerHTML = `
-      <div class="row">
-        <div class="col-md-4">
-          <label>${isZh ? '类型' : 'Type'}
-            <select class="form-control" name="type">
-              <option value="quote">${isZh ? '原文摘录' : 'Quote'}</option>
-              <option value="figure">${isZh ? '图片 / 图注' : 'Figure'}</option>
-              <option value="finding">${isZh ? '关键发现' : 'Finding'}</option>
-              <option value="protocol">${isZh ? '方法提示' : 'Protocol hint'}</option>
-            </select>
-          </label>
-        </div>
-        <div class="col-md-3 mt-2 mt-md-0">
-          <label>${isZh ? '页码' : 'Page'}
-            <input class="form-control" name="page" placeholder="3">
-          </label>
-        </div>
-        <div class="col-md-5 mt-2 mt-md-0">
-          <label>${isZh ? '章节 / 图号' : 'Section / figure'}
-            <input class="form-control" name="section" placeholder="Fig. 2B">
-          </label>
-        </div>
-      </div>
-      <label>${isZh ? '原文 / 图注 / 方法段落' : 'Original text / caption / method'}
-        <textarea class="form-control literature-evidence-textarea" name="original_text" rows="6" placeholder="${isZh ? '粘贴一句话、一段原文、图注，或你想回溯的材料方法细节。' : 'Paste the exact sentence, paragraph, figure caption, or method detail.'}"></textarea>
-      </label>
-      <label>${isZh ? '图片或来源 URL（可选）' : 'Figure/source URL (optional)'}
-        <input class="form-control" name="image_url" type="url" placeholder="https://...">
-      </label>
-      <label>${isZh ? '我的理解 / 为什么重要' : 'My note / why it matters'}
-        <textarea class="form-control" name="my_note" rows="3" placeholder="${isZh ? '例如：可作为某个实验的对照，或解释某个现象。' : 'Example: use as a control, or explains a phenotype.'}"></textarea>
-      </label>
-      <button type="submit" class="btn btn-primary"><i class="fas fa-plus fa-fw mr-1"></i>${isZh ? '保存摘录' : 'Save quote'}</button>
-    `;
-    evidenceSection.append(evidenceForm);
 
     const evidenceList = document.createElement('div');
-    evidenceList.className = 'literature-evidence-list mt-3';
-    evidenceList.append(text('h4', 'h6 mb-0', isZh ? '已保存证据' : 'Saved evidence'));
+    evidenceList.className = 'literature-evidence-list';
     if (!evidenceCards.length) {
-      evidenceList.append(text('div', 'text-muted small', isZh ? '还没有摘录。保存后可以复制 Markdown 引用块。' : 'No captures yet. Saved entries can be copied as Markdown citation blocks.'));
+      evidenceList.append(text('div', 'text-muted small', isZh ? '还没有证据摘录。阅读附件时，把关键原句、图注或方法保存到这里。' : 'No evidence yet. Save key quotes, captions, or methods here while reading.'));
     }
     for (const evidence of evidenceCards) {
       const cardNode = document.createElement('article');
@@ -404,49 +426,28 @@
       evidenceList.append(cardNode);
     }
     evidenceSection.append(evidenceList);
-    detail.append(evidenceSection);
 
-    const form = document.createElement('form');
-    form.className = 'literature-card-form mt-4';
-    form.dataset.literatureCardForm = item.key;
-    form.innerHTML = `
-      <div class="literature-section-head">
-        <h3 class="h5 mb-0">${isZh ? '阅读卡片' : 'Reading card'}</h3>
-      </div>
-      <label>${isZh ? '阅读状态' : 'Reading status'}
-        <select class="form-control" name="status">
-          <option value="unread">${statusLabel('unread')}</option>
-          <option value="reading">${statusLabel('reading')}</option>
-          <option value="read">${statusLabel('read')}</option>
-          <option value="important">${statusLabel('important')}</option>
-        </select>
-      </label>
-      <label>${isZh ? '一句话总结' : 'One-line summary'}
-        <input class="form-control" name="summary">
-      </label>
-      <label>${isZh ? '阅读笔记 / 实验启发' : 'Reading note / experiment context'}
-        <textarea class="form-control" name="note" rows="4"></textarea>
-      </label>
+    const capture = document.createElement('details');
+    capture.className = 'literature-capture';
+    capture.innerHTML = `<summary><i class="fas fa-plus fa-fw mr-1"></i>${isZh ? '新增证据摘录' : 'Capture evidence'}</summary>`;
+    const evidenceForm = document.createElement('form');
+    evidenceForm.className = 'literature-evidence-form';
+    evidenceForm.dataset.literatureEvidenceForm = item.key;
+    evidenceForm.innerHTML = `
       <div class="row">
-        <div class="col-md-6">
-          <label>${isZh ? '关联 Experiments' : 'Linked experiments'}
-            <input class="form-control" name="linked_experiments" placeholder="12, 18">
-          </label>
-        </div>
-        <div class="col-md-6 mt-2 mt-md-0">
-          <label>${isZh ? '关联 Resources' : 'Linked resources'}
-            <input class="form-control" name="linked_resources" placeholder="11, 24">
-          </label>
-        </div>
+        <div class="col-md-4"><label>${isZh ? '类型' : 'Type'}<select class="form-control" name="type"><option value="quote">${isZh ? '原文摘录' : 'Quote'}</option><option value="figure">${isZh ? '图片 / 图注' : 'Figure'}</option><option value="finding">${isZh ? '关键发现' : 'Finding'}</option><option value="protocol">${isZh ? '方法提示' : 'Protocol hint'}</option></select></label></div>
+        <div class="col-md-3 mt-2 mt-md-0"><label>${isZh ? '页码' : 'Page'}<input class="form-control" name="page" placeholder="3"></label></div>
+        <div class="col-md-5 mt-2 mt-md-0"><label>${isZh ? '章节 / 图号' : 'Section / figure'}<input class="form-control" name="section" placeholder="Fig. 2B"></label></div>
       </div>
-      <button type="submit" class="btn btn-secondary justify-self-start"><i class="fas fa-save fa-fw mr-1"></i>${isZh ? '保存阅读卡片' : 'Save reading card'}</button>
+      <label>${isZh ? '原文 / 图注 / 方法段落' : 'Original text / caption / method'}<textarea class="form-control literature-evidence-textarea" name="original_text" rows="6" placeholder="${isZh ? '粘贴需要精确回溯的原文。' : 'Paste the exact source text you need to trace.'}"></textarea></label>
+      <label>${isZh ? '图片或来源 URL（可选）' : 'Figure/source URL (optional)'}<input class="form-control" name="image_url" type="url" placeholder="https://..."></label>
+      <label>${isZh ? '我的理解 / 为什么重要' : 'My note / why it matters'}<textarea class="form-control" name="my_note" rows="3" placeholder="${isZh ? '它如何影响你的实验判断？' : 'How does this change your experimental decision?'}"></textarea></label>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-plus fa-fw mr-1"></i>${isZh ? '保存证据' : 'Save evidence'}</button>
     `;
-    form.elements.status.value = card.status;
-    form.elements.summary.value = card.summary || '';
-    form.elements.note.value = card.note || '';
-    form.elements.linked_experiments.value = card.linked_experiments.join(', ');
-    form.elements.linked_resources.value = card.linked_resources.join(', ');
-    detail.append(form);
+    capture.append(evidenceForm);
+    evidenceSection.append(capture);
+    noteGrid.append(evidenceSection);
+    detail.append(noteGrid);
   }
 
   function setPdfStatus(message = '') {

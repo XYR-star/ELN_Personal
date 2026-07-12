@@ -142,6 +142,7 @@ test('Literature and ideas shells render from the main navigation', async ({ pag
   await expect(page.locator('.literature-grid')).toBeVisible();
   await expect(page.locator('[data-literature-list]')).toBeVisible();
   await expect(page.locator('[data-literature-detail]')).toBeVisible();
+  await page.locator('.literature-filter-drawer > summary').click();
   await expect(page.locator('[data-literature-collections]')).toBeVisible();
   await expect(page.locator('[data-literature-tags]')).toBeVisible();
   await expect(page.locator('[data-literature-config]')).toBeVisible();
@@ -183,6 +184,7 @@ test('Literature can create a local paper and evidence reference', async ({ page
   await expect(page.locator('[data-literature-item]', { hasText: paperTitle })).toBeVisible();
   await expect(page.locator('[data-literature-detail]')).toContainText(paperTitle);
 
+  await page.locator('.literature-capture > summary').click();
   await page.locator('[data-literature-evidence-form] select[name="type"]').selectOption('figure');
   await page.locator('[data-literature-evidence-form] input[name="page"]').fill('3');
   await page.locator('[data-literature-evidence-form] input[name="section"]').fill('Fig. 2B');

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/literature.css?v=20260620-annotate5'>
+<link rel='stylesheet' href='/planner-assets/literature.css?v=20260712-workspace1'>
 
 <div class='literature-workspace' data-literature-root data-api-base='/literature-api.php' data-lang='{{ App.getLang() }}'>
   <div class='alert alert-info literature-setup' data-literature-setup hidden>
@@ -18,43 +18,43 @@
     </div>
   </div>
 
-  <div class='literature-toolbar card mb-3'>
-    <div class='card-body'>
+  <header class='literature-header'>
+    <div>
+      <h2 class='h4 mb-1'>{{ App.getLang() starts with 'zh' ? '研究文献' : 'Research library' }}</h2>
+      <p class='text-muted mb-0'>{{ App.getLang() starts with 'zh' ? '阅读论文，保存可回溯的证据，并连接到实验。' : 'Read papers, capture traceable evidence, and connect it to experiments.' }}</p>
+    </div>
+    <div class='literature-header-actions'>
+      <button type='button' class='btn btn-primary' data-literature-refresh><i class='fas fa-rotate fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '同步' : 'Sync' }}</button>
+      <button type='button' class='btn btn-secondary' data-literature-new-paper><i class='fas fa-plus fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '添加文献' : 'Add paper' }}</button>
+      <button type='button' class='btn btn-secondary literature-icon-button' data-literature-config title='{{ App.getLang() starts with 'zh' ? 'Zotero 设置' : 'Zotero settings' }}' aria-label='{{ App.getLang() starts with 'zh' ? 'Zotero 设置' : 'Zotero settings' }}'><i class='fas fa-gear fa-fw'></i></button>
+    </div>
+  </header>
+
+  <div class='literature-grid'>
+    <aside class='literature-library-pane'>
       <form class='literature-search' data-literature-search-form>
         <label class='sr-only' for='literatureSearch'>{{ App.getLang() starts with 'zh' ? '搜索文献' : 'Search literature' }}</label>
         <div class='input-group'>
-          <input id='literatureSearch' class='form-control' data-literature-search placeholder='{{ App.getLang() starts with 'zh' ? '搜索标题、作者、摘要、DOI' : 'Search title, author, abstract, DOI' }}'>
-          <div class='input-group-append'>
-            <button class='btn btn-primary' type='submit'><i class='fas fa-magnifying-glass fa-fw'></i></button>
-          </div>
+          <div class='input-group-prepend'><span class='input-group-text'><i class='fas fa-magnifying-glass fa-fw'></i></span></div>
+          <input id='literatureSearch' class='form-control' data-literature-search placeholder='{{ App.getLang() starts with 'zh' ? '标题、作者、DOI…' : 'Title, author, DOI…' }}'>
         </div>
       </form>
-      <div class='btn-group ml-lg-auto mt-2 mt-lg-0'>
-        <button type='button' class='btn btn-primary' data-literature-refresh><i class='fas fa-rotate fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '同步 Zotero' : 'Sync Zotero' }}</button>
-        <button type='button' class='btn btn-secondary' data-literature-new-paper><i class='fas fa-plus fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '添加本地文献' : 'Add local paper' }}</button>
-        <button type='button' class='btn btn-secondary' data-literature-config><i class='fas fa-key fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'API 配置' : 'API config' }}</button>
-      </div>
-    </div>
-  </div>
 
-  <div class='literature-grid'>
-    <aside class='card literature-sidebar'>
-      <div class='card-header font-weight-bold'>
-        <i class='fas fa-folder-tree fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'Collections' : 'Collections' }}
-      </div>
-      <div class='list-group list-group-flush' data-literature-collections>
-        <button type='button' class='list-group-item list-group-item-action active' data-literature-collection=''>{{ App.getLang() starts with 'zh' ? '全部文献' : 'All papers' }}</button>
-      </div>
-      <div class='card-header font-weight-bold border-top'>
-        <i class='fas fa-tags fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? 'Tags' : 'Tags' }}
-      </div>
-      <div class='literature-tags' data-literature-tags></div>
-    </aside>
+      <details class='literature-filter-drawer'>
+        <summary><span><i class='fas fa-sliders fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '筛选文献' : 'Filter library' }}</span><i class='fas fa-chevron-down fa-fw'></i></summary>
+        <div class='literature-filter-content'>
+          <h3>{{ App.getLang() starts with 'zh' ? '分类' : 'Collections' }}</h3>
+          <div class='list-group list-group-flush' data-literature-collections>
+            <button type='button' class='list-group-item list-group-item-action active' data-literature-collection=''>{{ App.getLang() starts with 'zh' ? '全部文献' : 'All papers' }}</button>
+          </div>
+          <h3>{{ App.getLang() starts with 'zh' ? '标签' : 'Tags' }}</h3>
+          <div class='literature-tags' data-literature-tags></div>
+        </div>
+      </details>
 
-    <main class='card literature-list-panel'>
-      <div class='card-header d-flex align-items-center justify-content-between'>
-        <strong>{{ App.getLang() starts with 'zh' ? '文献列表' : 'Papers' }}</strong>
-        <span class='text-muted small' data-literature-count>0</span>
+      <div class='literature-list-head'>
+        <strong>{{ App.getLang() starts with 'zh' ? '文献' : 'Papers' }}</strong>
+        <span class='literature-count' data-literature-count>0</span>
       </div>
       <div class='literature-list' data-literature-list>
         <div class='literature-empty text-center text-muted py-5' data-literature-empty>
@@ -67,16 +67,15 @@
           </div>
         </div>
       </div>
-    </main>
-
-    <aside class='card literature-detail-panel'>
-      <div class='card-header font-weight-bold'>
-        <i class='fas fa-file-lines fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '文献详情 / 阅读卡片' : 'Paper details / reading card' }}
-      </div>
-      <div class='card-body' data-literature-detail>
-        <p class='text-muted mb-0'>{{ App.getLang() starts with 'zh' ? '选择一篇文献查看详情，并填写本地阅读卡片。' : 'Select a paper to inspect metadata and fill the local reading card.' }}</p>
-      </div>
     </aside>
+
+    <main class='literature-reading-pane'>
+      <div class='literature-welcome' data-literature-detail>
+        <div class='literature-welcome-icon'><i class='fas fa-book-open'></i></div>
+        <h3>{{ App.getLang() starts with 'zh' ? '选择一篇论文开始阅读' : 'Choose a paper to begin' }}</h3>
+        <p>{{ App.getLang() starts with 'zh' ? '原文、阅读笔记和证据摘录会集中显示在这里。' : 'The paper, your notes, and captured evidence will stay together here.' }}</p>
+      </div>
+    </main>
   </div>
 
   <div class='alert alert-danger mt-3' data-literature-error hidden></div>
@@ -230,5 +229,5 @@
   </dialog>
 </div>
 
-<script defer src='/planner-assets/literature.js?v=20260620-annotate5'></script>
+<script defer src='/planner-assets/literature.js?v=20260712-workspace1'></script>
 {% endblock %}

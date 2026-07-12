@@ -59,6 +59,20 @@ test('literature empty state presents explicit sync and local-paper actions', ()
   assert.match(script, /emptyNewPaperButton/);
 });
 
+test('literature uses a focused library and reading workspace', () => {
+  const template = read('literature.html');
+  const script = read('public/literature.js');
+  const styles = read('public/literature.css');
+
+  assert.match(template, /class='literature-library-pane'/);
+  assert.match(template, /class='literature-reading-pane'/);
+  assert.match(template, /class='literature-filter-drawer'/);
+  assert.doesNotMatch(template, /literature-detail-panel/);
+  assert.match(script, /literature-paper-workspace/);
+  assert.match(script, /literature-capture/);
+  assert.match(styles, /grid-template-columns:\s*minmax\(300px, 370px\) minmax\(0, 1fr\)/);
+});
+
 test('global mobile polish provides full-size entity toolbar targets', () => {
   const head = read('head.html');
   const styles = read('public/eln-ux.css');
