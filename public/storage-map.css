@@ -67,15 +67,36 @@
 
 .storage-location-tree {
   display: grid;
-  gap: .2rem;
+  gap: .35rem;
   margin-top: .5rem;
+}
+
+.storage-tree-branch { min-width: 0; }
+
+.storage-tree-children {
+  position: relative;
+  display: grid;
+  gap: .2rem;
+  margin: .2rem 0 .1rem 1rem;
+  padding-left: .65rem;
+  border-left: 1px solid #cbd2d8;
+}
+
+.storage-tree-children::before {
+  position: absolute;
+  top: 0;
+  left: -1px;
+  width: 9px;
+  height: 1px;
+  content: '';
+  background: #cbd2d8;
 }
 
 .storage-tree-node {
   display: grid;
   width: 100%;
   min-height: 52px;
-  padding: .4rem .5rem .4rem calc(.5rem + var(--depth) * .7rem);
+  padding: .4rem .5rem;
   grid-template-columns: 28px minmax(0, 1fr);
   grid-template-rows: auto auto;
   column-gap: .4rem;
@@ -511,8 +532,9 @@
   .storage-page-actions .btn { min-height: 44px; }
   .storage-spatial-layout { display: block; min-height: 0; }
   .storage-location-panel { padding-right: 0; border-right: 0; border-bottom: 1px solid var(--storage-border); }
-  .storage-location-tree { display: flex; padding-bottom: .5rem; overflow-x: auto; }
-  .storage-tree-node { min-width: 170px; padding-left: .5rem; }
+  .storage-location-tree { display: grid; padding-bottom: .5rem; overflow-x: visible; }
+  .storage-tree-node { min-width: 0; }
+  .storage-tree-children { margin-left: .85rem; }
   .storage-stage { padding: 1rem 0 2rem; }
   .storage-stage-head { align-items: flex-start; }
   .storage-stage-actions { flex-wrap: wrap; justify-content: flex-end; }

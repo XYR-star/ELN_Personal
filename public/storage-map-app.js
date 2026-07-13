@@ -122,21 +122,36 @@ function iconFor(location) {
 
 function renderTree() {
   const byId = new Map(state.locations.map((location) => [Number(location.id), location]));
-  const sorted = [...state.locations].sort((a, b) => {
-    const depth = locationDepth(a, byId) - locationDepth(b, byId);
-    return depth || String(a.position_code || '').localeCompare(String(b.position_code || '')) || Number(a.id) - Number(b.id);
-  });
-  $('#storage-location-count').textContent = `${state.locations.length}`;
-  $('#storage-location-tree').innerHTML = sorted.length ? sorted.map((location) => {
+  const byParent = new Map();
+  for (const location of state.locations) {
+    const parentId = location.parent_id && byId.has(Number(location.parent_id)) ? Number(location.parent_id) : 0;
+    if (!byParent.has(parentId)) byParent.set(parentId, []);
+    byParent.get(parentId).push(location);
+  }
+  const sortLocations = (locations = []) => [...locations].sort((a, b) => (
+    String(a.position_code || '').localeCompare(String(b.position_code || '')) || Number(a.id) - Number(b.id)
+  ));
+  const renderBranch = (location, ancestors = new Set()) => {
+    if (ancestors.has(Number(location.id))) return '';
+    const nextAncestors = new Set(ancestors).add(Number(location.id));
     const active = Number(location.id) === Number(state.selectedLocationId) ? ' active' : '';
+    const children = sortLocations(byParent.get(Number(location.id)) || []);
     return `
-      <button class="storage-tree-node${active}" data-location-id="${location.id}" style="--depth:${locationDepth(location, byId)}" type="button">
-        <span>${iconFor(location)}</span>
-        <strong>${escapeHtml(location.name)}</strong>
-        <small>${escapeHtml(location.kind)}${location.position_code ? ` · ${escapeHtml(location.position_code)}` : ''}${location.layout_type === 'grid' ? ` · ${location.row_count}x${location.column_count}` : ''}</small>
-      </button>
+      <div class="storage-tree-branch" data-location-branch="${location.id}">
+        <button class="storage-tree-node${active}" data-location-id="${location.id}" type="button">
+          <span>${iconFor(location)}</span>
+          <strong>${escapeHtml(location.name)}</strong>
+          <small>${escapeHtml(locationKindLabel(location))}${location.position_code ? ` · ${escapeHtml(location.position_code)}` : ''}${location.layout_type === 'grid' ? ` · ${location.row_count}×${location.column_count}` : ''}</small>
+        </button>
+        ${children.length ? `<div class="storage-tree-children">${children.map((child) => renderBranch(child, nextAncestors)).join('')}</div>` : ''}
+      </div>
     `;
-  }).join('') : '<p class="text-muted">还没有位置，先新建一个冰箱。</p>';
+  };
+  const roots = sortLocations(byParent.get(0) || []);
+  $('#storage-location-count').textContent = `${state.locations.length}`;
+  $('#storage-location-tree').innerHTML = roots.length
+    ? roots.map((location) => renderBranch(location)).join('')
+    : '<p class="text-muted">还没有位置，先新建一个冰箱。</p>';
   $$('.storage-tree-node').forEach((button) => button.addEventListener('click', () => selectLocation(Number(button.dataset.locationId))));
 }
 

@@ -101,6 +101,8 @@ test('storage map presents a spatial hierarchy instead of fixed dashboard cards'
   assert.doesNotMatch(template, /storage-native-panel/);
   assert.match(script, /function renderFreezer/);
   assert.match(script, /function renderBox/);
+  assert.match(script, /storage-tree-children/);
   assert.match(styles, /\.storage-freezer-cabinet/);
+  assert.match(styles, /\.storage-tree-children/);
   assert.match(styles, /\.storage-slot-cell[\s\S]*border-radius:\s*50%/);
 });
