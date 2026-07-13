@@ -81,3 +81,11 @@ test('global mobile polish provides full-size entity toolbar targets', () => {
   assert.match(styles, /min-width:\s*44px/);
   assert.match(styles, /min-height:\s*44px/);
 });
+
+test('storage location save relies on one post-save selection refresh', () => {
+  const script = read('public/storage-map-app.js');
+  const submitHandler = script.slice(script.indexOf("$('#storage-location-form').addEventListener('submit'"), script.indexOf("$('#storage-item-search').addEventListener('input'"));
+
+  assert.match(submitHandler, /await loadLocations\(\)/);
+  assert.doesNotMatch(submitHandler, /await selectLocation/);
+});

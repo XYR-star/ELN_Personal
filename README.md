@@ -230,3 +230,7 @@ the recorded baseline and the browser tests pass.
 custom runtime data. It validates every generated archive and removes backup
 sets older than the configured retention period. The sample systemd units in
 `ops/systemd/` run it daily without restarting the ELN.
+
+`ops/backup-zotero-webdav.sh` mirrors Zotero WebDAV attachments to the configured
+rclone remote and preserves Nginx-compatible ownership on the shared log
+directory.

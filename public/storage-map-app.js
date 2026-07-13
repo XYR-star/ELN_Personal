@@ -453,7 +453,6 @@ function bindControls() {
     await api(path, { method: id ? 'PATCH' : 'POST', body: JSON.stringify(data) });
     $('#storage-location-dialog').close();
     await loadLocations();
-    if (id) await selectLocation(Number(id));
   });
   $('#storage-item-search').addEventListener('input', (event) => searchItems(event.target.value));
   categoryField()?.addEventListener('change', () => {
