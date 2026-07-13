@@ -114,10 +114,10 @@ function locationDepth(location, byId) {
 }
 
 function iconFor(location) {
-  if (location.kind === 'freezer') return '▦';
-  if (location.kind === 'drawer') return '▤';
-  if (location.kind === 'box') return '▧';
-  return '□';
+  if (location.kind === 'freezer') return '<i class="fas fa-temperature-low fa-fw"></i>';
+  if (location.kind === 'drawer') return '<i class="fas fa-layer-group fa-fw"></i>';
+  if (location.kind === 'box') return '<i class="fas fa-border-all fa-fw"></i>';
+  return '<i class="fas fa-location-dot fa-fw"></i>';
 }
 
 function renderTree() {
@@ -146,8 +146,60 @@ function updateLocationActions() {
   $('#storage-delete-location').hidden = !hasSelection;
 }
 
+function locationTrail(locationId) {
+  const byId = new Map(state.locations.map((location) => [Number(location.id), location]));
+  const trail = [];
+  const seen = new Set();
+  let current = byId.get(Number(locationId));
+  while (current && !seen.has(Number(current.id))) {
+    trail.unshift(current);
+    seen.add(Number(current.id));
+    current = current.parent_id ? byId.get(Number(current.parent_id)) : null;
+  }
+  return trail;
+}
+
+function renderBreadcrumb(locationId) {
+  const breadcrumb = $('#storage-breadcrumb');
+  const trail = locationTrail(locationId);
+  breadcrumb.innerHTML = trail.map((location, index) => `
+    ${index ? '<i class="fas fa-chevron-right fa-fw"></i>' : ''}
+    <button type="button" data-breadcrumb-location="${location.id}">${escapeHtml(location.name)}</button>
+  `).join('');
+  $$('[data-breadcrumb-location]').forEach((button) => button.addEventListener('click', () => selectLocation(Number(button.dataset.breadcrumbLocation))));
+}
+
+function locationKindLabel(location) {
+  return ({ freezer: '冰箱', drawer: '抽屉', box: '冻存盒', location: '位置' })[location.kind] || location.kind;
+}
+
+function updateOccupancy(view = null, childCount = 0) {
+  const node = $('#storage-occupancy');
+  if (!view?.slots) {
+    node.textContent = childCount ? `${childCount} 个下级位置` : '暂无下级位置';
+    node.hidden = false;
+    return;
+  }
+  const occupied = view.slots.filter((slot) => slot.assignment).length;
+  const children = view.slots.filter((slot) => slot.child).length;
+  const total = view.slots.length;
+  node.textContent = `${occupied + children} / ${total} 已使用`;
+  node.hidden = false;
+}
+
+function closeSlotDetail() {
+  $('[data-storage-detail-panel]')?.classList.add('is-empty');
+}
+
+function openSlotDetail() {
+  $('[data-storage-detail-panel]')?.classList.remove('is-empty');
+}
+
 async function loadLocations() {
   state.locations = await api('locations');
+  if (state.selectedLocationId && !state.locations.some((location) => Number(location.id) === Number(state.selectedLocationId))) {
+    state.selectedLocationId = null;
+  }
   if (!state.selectedLocationId && state.locations.length) {
     state.selectedLocationId = Number(state.locations[0].id);
   }
@@ -184,12 +236,16 @@ async function selectLocation(locationId) {
   updateLocationActions();
   const location = state.locations.find((item) => Number(item.id) === Number(locationId));
   if (!location) return;
+  closeSlotDetail();
+  renderBreadcrumb(location.id);
   $('#storage-selected-name').textContent = location.name;
-  $('#storage-selected-meta').textContent = `${location.kind}${location.layout_type === 'grid' ? ` · ${location.row_count} x ${location.column_count}` : ''}`;
+  $('#storage-selected-meta').textContent = `${locationKindLabel(location)}${location.position_code ? ` · ${location.position_code}` : ''}${location.layout_type === 'grid' ? ` · ${location.row_count} × ${location.column_count}` : ''}`;
+  $('#storage-location-kind-icon').innerHTML = iconFor(location);
   $('#storage-slot-detail').innerHTML = '<p class="text-muted">点击孔位查看样本和历史。</p>';
 
   if (location.layout_type !== 'grid') {
     const children = state.locations.filter((item) => Number(item.parent_id) === Number(location.id));
+    updateOccupancy(null, children.length);
     $('#storage-grid').className = 'storage-grid-empty';
     $('#storage-grid').innerHTML = children.length
       ? children.map((child) => `<button class="storage-child-location" data-location-id="${child.id}" type="button"><strong>${escapeHtml(child.name)}</strong><span>${escapeHtml(child.kind)}</span></button>`).join('')
@@ -200,24 +256,47 @@ async function selectLocation(locationId) {
 
   const data = await api(`locations/${location.id}/view`);
   state.view = buildStorageView(data);
+  updateOccupancy(state.view);
   renderGrid(state.view);
 }
 
 function renderGrid(view) {
+  if (view.location.kind === 'freezer') {
+    renderFreezer(view);
+    return;
+  }
   if (view.location.kind === 'drawer') {
     renderDrawer(view);
     return;
   }
+  renderBox(view);
+}
+
+function renderFreezer(view) {
   const grid = $('#storage-grid');
-  grid.className = 'storage-box-grid';
+  grid.className = 'storage-freezer-cabinet';
   grid.style.setProperty('--columns', view.columns);
   grid.innerHTML = view.slots.map((slot) => `
-    <button class="storage-slot-cell ${slot.state}" data-slot-code="${slot.code}" type="button">
+    <button class="storage-freezer-slot ${slot.state}" data-slot-code="${slot.code}" type="button">
       <span class="storage-slot-code">${slot.code}</span>
-      <strong>${slot.child ? escapeHtml(slot.child.name) : slot.assignment ? escapeHtml(slot.assignment.item_title) : ''}</strong>
-      <small>${slot.child ? escapeHtml(slot.child.kind) : slot.assignment ? `${slot.assignment.qty_stored} ${escapeHtml(slot.assignment.qty_unit)}` : '空'}</small>
+      <strong>${slot.child ? escapeHtml(slot.child.name) : slot.assignment ? escapeHtml(slot.assignment.item_title) : '空位'}</strong>
+      <small>${slot.child ? locationKindLabel(slot.child) : slot.assignment ? `${slot.assignment.qty_stored} ${escapeHtml(slot.assignment.qty_unit)}` : '可用'}</small>
     </button>
   `).join('');
+  $$('.storage-freezer-slot').forEach((button) => button.addEventListener('click', () => showSlot(view.slots.find((slot) => slot.code === button.dataset.slotCode))));
+}
+
+function renderBox(view) {
+  const grid = $('#storage-grid');
+  grid.className = 'storage-box-shell';
+  grid.innerHTML = `<div class="storage-box-grid" style="--columns:${view.columns}">
+    ${view.slots.map((slot) => `
+      <button class="storage-slot-cell ${slot.state}" data-slot-code="${slot.code}" type="button" title="${slot.assignment ? escapeHtml(slot.assignment.item_title) : slot.child ? escapeHtml(slot.child.name) : `空位 ${slot.code}`}">
+        <span class="storage-slot-code">${slot.code}</span>
+        ${slot.assignment ? `<strong>${escapeHtml(slot.assignment.item_title)}</strong>` : ''}
+      </button>
+    `).join('')}
+  </div>`;
   $$('.storage-slot-cell').forEach((button) => button.addEventListener('click', () => showSlot(view.slots.find((slot) => slot.code === button.dataset.slotCode))));
 }
 
@@ -295,6 +374,7 @@ function openAssignmentDialog(slot) {
 
 async function showSlot(slot) {
   state.selectedSlot = slot;
+  openSlotDetail();
   const location = state.locations.find((item) => Number(item.id) === Number(state.selectedLocationId));
   if (slot.child) {
     $('#storage-slot-detail').innerHTML = `
@@ -426,6 +506,7 @@ function renderItemResults(items = [], query = '') {
 
 function bindControls() {
   ensureItemPicker();
+  $('#storage-detail-close').addEventListener('click', closeSlotDetail);
   $('#storage-new-freezer').addEventListener('click', () => openLocationDialog(null, {
     name: '-80 冰箱',
     kind: 'freezer',

@@ -89,3 +89,18 @@ test('storage location save relies on one post-save selection refresh', () => {
   assert.match(submitHandler, /await loadLocations\(\)/);
   assert.doesNotMatch(submitHandler, /await selectLocation/);
 });
+
+test('storage map presents a spatial hierarchy instead of fixed dashboard cards', () => {
+  const template = read('storage-map.html');
+  const script = read('public/storage-map-app.js');
+  const styles = read('public/storage-map.css');
+
+  assert.match(template, /id='storage-breadcrumb'/);
+  assert.match(template, /id='storage-occupancy'/);
+  assert.match(template, /data-storage-detail-panel/);
+  assert.doesNotMatch(template, /storage-native-panel/);
+  assert.match(script, /function renderFreezer/);
+  assert.match(script, /function renderBox/);
+  assert.match(styles, /\.storage-freezer-cabinet/);
+  assert.match(styles, /\.storage-slot-cell[\s\S]*border-radius:\s*50%/);
+});

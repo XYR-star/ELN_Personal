@@ -1,40 +1,57 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/storage-map.css?v=20260618-category1'>
+<link rel='stylesheet' href='/planner-assets/storage-map.css?v=20260713-spatial1'>
 
 <div class='storage-map-page' data-storage-map-root data-api-base='/storage-map-api.php' data-initial-item-id='{{ initialItemId|default(0) }}'>
-  <div class='storage-page-actions'>
-    <div class='btn-group'>
-      <button class='btn btn-primary' id='storage-new-freezer' type='button'><i class='fas fa-plus fa-fw'></i> 新建冰箱</button>
-      <button class='btn btn-secondary' type='button' data-action='toggle-create-modal' data-type='items'><i class='fas fa-cubes-stacked fa-fw'></i> 新建 Resource</button>
+  <header class='storage-command-bar'>
+    <div>
+      <h2 class='h4 mb-1'>存放导航</h2>
+      <p class='text-muted mb-0'>从冰箱进入抽屉和冻存盒，快速定位样品。</p>
     </div>
-  </div>
+    <div class='storage-page-actions'>
+      <button class='btn btn-primary' id='storage-new-freezer' type='button'><i class='fas fa-plus fa-fw mr-1'></i>新建冰箱</button>
+      <button class='btn btn-secondary' type='button' data-action='toggle-create-modal' data-type='items'><i class='fas fa-cubes-stacked fa-fw mr-1'></i>新建 Resource</button>
+    </div>
+  </header>
 
-  <section class='storage-native-layout'>
-    <aside class='storage-native-panel'>
-      <div class='d-flex align-items-center justify-content-between mb-2'>
-        <h2 class='h5 mb-0'>位置分布</h2>
-        <span id='storage-location-count' class='text-muted small'>0</span>
+  <section class='storage-spatial-layout'>
+    <aside class='storage-location-panel'>
+      <div class='storage-panel-head'>
+        <h2>位置</h2>
+        <span id='storage-location-count' class='storage-count'>0</span>
       </div>
       <div id='storage-location-tree' class='storage-location-tree'></div>
     </aside>
 
-    <main class='storage-native-panel storage-map-panel'>
-      <div class='d-flex align-items-start justify-content-between mb-3'>
-        <div>
-          <h2 id='storage-selected-name' class='h4 mb-1'>选择一个位置</h2>
-          <p id='storage-selected-meta' class='text-muted mb-0'>冰箱、抽屉和盒子会在这里展开。</p>
+    <main class='storage-stage'>
+      <nav id='storage-breadcrumb' class='storage-breadcrumb' aria-label='当前位置'></nav>
+      <div class='storage-stage-head'>
+        <div class='storage-stage-title'>
+          <span id='storage-location-kind-icon' class='storage-kind-icon'><i class='fas fa-location-dot'></i></span>
+          <div>
+            <h2 id='storage-selected-name'>选择一个位置</h2>
+            <p id='storage-selected-meta'>冰箱、抽屉和盒子会在这里展开。</p>
+          </div>
         </div>
-        <div class='btn-group btn-group-sm'>
-          <button class='btn btn-secondary' id='storage-edit-location' type='button' hidden>编辑</button>
-          <button class='btn btn-danger' id='storage-delete-location' type='button' hidden>删除</button>
+        <div class='storage-stage-actions'>
+          <div id='storage-occupancy' class='storage-occupancy' hidden></div>
+          <button class='btn btn-secondary btn-sm' id='storage-edit-location' type='button' hidden title='编辑位置' aria-label='编辑位置'><i class='fas fa-pen fa-fw'></i></button>
+          <button class='btn btn-danger btn-sm' id='storage-delete-location' type='button' hidden title='删除位置' aria-label='删除位置'><i class='fas fa-trash fa-fw'></i></button>
         </div>
+      </div>
+      <div class='storage-legend' aria-label='孔位图例'>
+        <span><i class='storage-legend-dot is-empty'></i>空位</span>
+        <span><i class='storage-legend-dot is-child'></i>下级位置</span>
+        <span><i class='storage-legend-dot is-occupied'></i>已存样品</span>
       </div>
       <div id='storage-grid' class='storage-grid-empty'>选择左侧位置开始。</div>
     </main>
 
-    <aside class='storage-native-panel'>
-      <h2 class='h5'>孔位详情</h2>
+    <aside class='storage-detail-panel is-empty' data-storage-detail-panel>
+      <div class='storage-panel-head'>
+        <h2>孔位详情</h2>
+        <button id='storage-detail-close' class='btn btn-sm btn-secondary' type='button' title='关闭详情' aria-label='关闭详情'><i class='fas fa-times fa-fw'></i></button>
+      </div>
       <div id='storage-slot-detail' class='storage-slot-detail text-muted'>点击孔位查看样本和历史。</div>
     </aside>
   </section>
@@ -118,5 +135,5 @@
   </form>
 </dialog>
 
-<script type='module' src='/planner-assets/storage-map-app.js?v=20260618-category1'></script>
+<script type='module' src='/planner-assets/storage-map-app.js?v=20260713-spatial1'></script>
 {% endblock %}
