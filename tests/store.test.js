@@ -27,3 +27,22 @@ test('PlannerStore persists plans and supports CRUD', async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('PlannerStore keeps concurrent plans instead of overwriting the same snapshot', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'planner-store-concurrent-'));
+  try {
+    const store = new PlannerStore(path.join(dir, 'plans.json'));
+    const titles = Array.from({ length: 12 }, (_, index) => `Concurrent plan ${index + 1}`);
+
+    await Promise.all(titles.map((title) => store.create({
+      title,
+      start: '2026-07-22T09:00'
+    })));
+
+    const plans = await store.list();
+    assert.equal(plans.length, titles.length);
+    assert.deepEqual(new Set(plans.map((plan) => plan.title)), new Set(titles));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

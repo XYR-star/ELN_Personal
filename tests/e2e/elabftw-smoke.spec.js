@@ -73,7 +73,7 @@ test('Planner renders calendar, selected list, and no browser errors', async ({ 
   await expect(page.locator('[data-planner-root]')).toBeVisible();
   await expect(page.locator('#calendar-grid')).toBeVisible();
   await expect(page.locator('#selected-list')).toBeVisible();
-  await expect(page.locator('.day-cell, .agenda-day').first()).toBeVisible();
+  await expect(page.locator('.day-cell, .time-day-column').first()).toBeVisible();
   await expect(page.locator('#calendar-grid')).not.toBeEmpty();
 
   expect(errors).toEqual([]);

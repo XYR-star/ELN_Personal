@@ -6,7 +6,7 @@ import { createTodo, sortTodos, updateTodo } from './todos.js';
 export class PlannerStore {
   constructor(filePath) {
     this.filePath = filePath;
-    this.writeQueue = Promise.resolve();
+    this.operationQueue = Promise.resolve();
   }
 
   async ensureFile() {
@@ -28,8 +28,18 @@ export class PlannerStore {
 
   async writeData(data) {
     await this.ensureFile();
-    this.writeQueue = this.writeQueue.then(() => writeFile(this.filePath, JSON.stringify(data, null, 2)));
-    await this.writeQueue;
+    await writeFile(this.filePath, JSON.stringify(data, null, 2));
+  }
+
+  async mutateData(operation) {
+    const mutation = this.operationQueue.then(async () => {
+      const data = await this.readData();
+      const result = await operation(data);
+      await this.writeData(data);
+      return result;
+    });
+    this.operationQueue = mutation.catch(() => {});
+    return mutation;
   }
 
   async list({ start, end } = {}) {
@@ -46,28 +56,29 @@ export class PlannerStore {
   }
 
   async create(input) {
-    const data = await this.readData();
-    const plan = createPlan(input);
-    data.plans.push(plan);
-    await this.writeData(data);
-    return plan;
+    return this.mutateData((data) => {
+      const plan = createPlan(input);
+      data.plans.push(plan);
+      return plan;
+    });
   }
 
   async update(id, input) {
-    const data = await this.readData();
-    const index = data.plans.findIndex((item) => item.id === id);
-    if (index === -1) throw new Error('plan not found');
-    const plan = updatePlan(data.plans[index], input);
-    data.plans[index] = plan;
-    await this.writeData(data);
-    return plan;
+    return this.mutateData((data) => {
+      const index = data.plans.findIndex((item) => item.id === id);
+      if (index === -1) throw new Error('plan not found');
+      const plan = updatePlan(data.plans[index], input);
+      data.plans[index] = plan;
+      return plan;
+    });
   }
 
   async delete(id) {
-    const data = await this.readData();
-    const next = data.plans.filter((item) => item.id !== id);
-    if (next.length === data.plans.length) throw new Error('plan not found');
-    await this.writeData({ plans: next });
+    return this.mutateData((data) => {
+      const index = data.plans.findIndex((item) => item.id === id);
+      if (index === -1) throw new Error('plan not found');
+      data.plans.splice(index, 1);
+    });
   }
 }
 

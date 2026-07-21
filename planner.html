@@ -1,15 +1,12 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/styles.css?v=20260617-init-guard1'>
+<link rel='stylesheet' href='/planner-assets/styles.css?v=20260721-calendar2'>
 <link rel='stylesheet' href='/planner-assets/todos.css?v=20260624-todo1'>
 
 <div class='planner-embedded' data-planner-root data-api-base='/planner-api.php' data-lang='{{ plannerLang }}'>
   <section class='planner-actions-row'>
-    <div class='planner-actions btn-group'>
-      <button id='today-button' class='btn btn-secondary' type='button' data-i18n='action.today'>今天</button>
-      <button id='prev-button' class='btn btn-secondary' type='button' data-i18n='action.previous'>上一页</button>
-      <button id='next-button' class='btn btn-secondary' type='button' data-i18n='action.next'>下一页</button>
-      <button id='new-plan-button' class='btn btn-primary' type='button' data-i18n='action.newPlan'>新建计划</button>
+    <div class='planner-actions'>
+      <button id='new-plan-button' class='btn btn-primary' type='button'><i class='fas fa-plus fa-fw mr-1'></i><span data-i18n='action.newPlan'>新建计划</span></button>
     </div>
   </section>
 
@@ -48,27 +45,34 @@
   </section>
 
   <section class='planner-toolbar'>
+    <div class='planner-date-navigation'>
+      <button id='today-button' class='btn btn-secondary' type='button' data-i18n='action.today'>今天</button>
+      <div class='btn-group' aria-label='日期导航'>
+        <button id='prev-button' class='btn btn-secondary' type='button' title='上一页' aria-label='上一页' data-i18n-attr='title:action.previous,aria-label:action.previous'><i class='fas fa-chevron-left fa-fw'></i></button>
+        <button id='next-button' class='btn btn-secondary' type='button' title='下一页' aria-label='下一页' data-i18n-attr='title:action.next,aria-label:action.next'><i class='fas fa-chevron-right fa-fw'></i></button>
+      </div>
+    </div>
+    <div class='calendar-title' id='calendar-title'></div>
     <div class='segmented' aria-label='视图模式' data-i18n-attr='aria-label:view.label'>
-      <button class='active' type='button' data-view='month' data-i18n='view.month'>月</button>
-      <button type='button' data-view='week' data-i18n='view.week'>周</button>
+      <button type='button' data-view='month' data-i18n='view.month'>月</button>
+      <button class='active' type='button' data-view='week' data-i18n='view.week'>周</button>
       <button type='button' data-view='day' data-i18n='view.day'>今日</button>
     </div>
-    <label><span data-i18n='filter.type'>类型</span>
+    <label class='planner-filter'><span data-i18n='filter.type'>类型</span>
       <select id='type-filter' class='form-control'>
         <option value='' data-i18n='filter.all'>全部</option>
       </select>
     </label>
-    <label><span data-i18n='filter.status'>状态</span>
+    <label class='planner-filter'><span data-i18n='filter.status'>状态</span>
       <select id='status-filter' class='form-control'>
         <option value='' data-i18n='filter.all'>全部</option>
       </select>
     </label>
-    <input id='search-input' class='form-control' placeholder='搜索标题、备注、链接' data-i18n-attr='placeholder:filter.searchPlaceholder'>
+    <input id='search-input' class='form-control planner-search' placeholder='搜索标题、备注、链接' data-i18n-attr='placeholder:filter.searchPlaceholder'>
   </section>
 
   <section class='planner-layout'>
     <article class='planner-calendar-panel'>
-      <div class='calendar-title' id='calendar-title'></div>
       <div id='calendar-grid' class='calendar-grid'></div>
     </article>
     <aside class='planner-side-panel'>
@@ -77,7 +81,7 @@
           <h2 data-i18n='side.selectedDate'>选中日期</h2>
           <p class='muted'><span id='selected-date'></span><span id='selected-count'></span></p>
         </div>
-        <button id='selected-new-plan-button' class='btn btn-secondary btn-sm' type='button' data-i18n='action.newPlan'>新建计划</button>
+        <button id='selected-new-plan-button' class='btn btn-secondary btn-sm' type='button'><i class='fas fa-plus fa-fw mr-1'></i><span data-i18n='action.newPlan'>新建计划</span></button>
       </div>
       <div id='selected-list' class='plan-list'></div>
     </aside>
@@ -104,6 +108,7 @@
     <div id='planner-form-error' class='alert alert-danger mb-0' hidden></div>
     <div class='planner-modal-actions'>
       <button class='btn btn-primary' type='submit' data-i18n='action.save'>保存</button>
+      <button class='btn btn-secondary' id='save-another-button' type='submit' data-save-another data-i18n='action.saveAnother'>保存并继续新建</button>
       <button class='btn btn-secondary' id='mark-done-button' type='button' data-i18n='action.markDone'>标记完成</button>
       <button class='btn btn-secondary' id='delay-button' type='button' data-i18n='action.delay'>推迟</button>
       <button class='btn btn-danger' id='delete-button' type='button' data-i18n='action.delete'>删除</button>
@@ -111,6 +116,6 @@
   </form>
 </dialog>
 
-<script type='module' src='/planner-assets/app.js?v=20260617-init-guard1'></script>
+<script type='module' src='/planner-assets/app.js?v=20260721-calendar2'></script>
 <script defer src='/planner-assets/todos.js?v=20260624-todo1'></script>
 {% endblock %}
