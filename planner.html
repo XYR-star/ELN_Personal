@@ -4,12 +4,6 @@
 <link rel='stylesheet' href='/planner-assets/todos.css?v=20260721-add-button1'>
 
 <div class='planner-embedded' data-planner-root data-api-base='/planner-api.php' data-lang='{{ plannerLang }}'>
-  <section class='planner-actions-row'>
-    <div class='planner-actions'>
-      <button id='new-plan-button' class='btn btn-primary' type='button'><i class='fas fa-plus fa-fw mr-1'></i><span data-i18n='action.newPlan'>新建计划</span></button>
-    </div>
-  </section>
-
   <section class='planner-todos' data-todos-root data-todo-mode='editor' data-api-base='/planner-api.php'>
     <div class='planner-todos-head'>
       <div>
@@ -116,6 +110,6 @@
   </form>
 </dialog>
 
-<script type='module' src='/planner-assets/app.js?v=20260721-visual1'></script>
+<script type='module' src='/planner-assets/app.js?v=20260721-visual2'></script>
 <script defer src='/planner-assets/todos.js?v=20260624-todo1'></script>
 {% endblock %}

@@ -222,7 +222,8 @@ test('Planner uses the native page title without an extra content h1', async ({ 
   await expect(page.locator('#pageTitle')).toContainText(/Planner|规划日历/);
   await expect(page.locator('[data-planner-root] h1')).toHaveCount(0);
   await expect(page.locator('[data-planner-root]')).not.toContainText(/Experiment Planner|实验规划日历/);
-  await expect(page.locator('.planner-actions')).toBeVisible();
+  await expect(page.locator('#new-plan-button')).toHaveCount(0);
+  await expect(page.locator('#selected-new-plan-button')).toBeVisible();
 
   expect(errors).toEqual([]);
 });

@@ -576,7 +576,6 @@ async function deletePlan(id) {
 }
 
 function bindControls() {
-  $('#new-plan-button').addEventListener('click', () => openDialog());
   $('#selected-new-plan-button')?.addEventListener('click', () => openDialog());
   $('#today-button').addEventListener('click', async () => {
     state.cursor = todayInAppTimeZone();
