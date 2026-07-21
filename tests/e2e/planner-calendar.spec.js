@@ -73,3 +73,27 @@ test('same-day plans remain distinct after save another and reload', async ({ pa
   await deletePlansByTitle(page, titles);
   cleanupTitles = [];
 });
+
+test('calendar navigation keeps the visible and selected dates in sync', async ({ page }) => {
+  await page.goto('/planner.php', { waitUntil: 'domcontentloaded' });
+  await loginIfNeeded(page);
+
+  const initialDate = await page.locator('#selected-date').textContent();
+  await page.locator('[data-view="day"]').click();
+  await expect(page.locator('.calendar-grid')).toHaveClass(/\bday\b/);
+  await expect(page.locator('.timeline-day-header')).toHaveAttribute('data-date', initialDate);
+
+  await page.locator('#next-button').click();
+  const expectedDate = await page.evaluate((value) => {
+    const date = new Date(`${value}T00:00`);
+    date.setDate(date.getDate() + 1);
+    const pad = (part) => String(part).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }, initialDate);
+  await expect(page.locator('#selected-date')).toHaveText(expectedDate);
+  await expect(page.locator('.timeline-day-header')).toHaveAttribute('data-date', expectedDate);
+
+  await page.locator('[data-view="week"]').click();
+  await expect(page.locator('.calendar-grid')).toHaveClass(/\bweek\b/);
+  await expect(page.locator(`.timeline-day-header[data-date="${expectedDate}"]`)).toHaveClass(/selected/);
+});

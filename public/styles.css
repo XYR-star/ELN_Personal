@@ -345,7 +345,7 @@
 
 .timeline-track {
   display: grid;
-  min-height: 840px;
+  min-height: 900px;
   grid-template-columns: 58px minmax(0, 1fr);
 }
 
@@ -382,7 +382,7 @@
 .time-slot {
   display: block;
   width: 100%;
-  height: 56px;
+  height: 60px;
   padding: 0;
   background: transparent;
   border: 0;
@@ -409,7 +409,14 @@
 
 .timed-event:hover { z-index: 3; background: #ccecef; }
 .timed-event span { display: block; overflow: hidden; font-size: .66rem; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
-.timed-event strong { display: block; overflow: hidden; font-size: .74rem; line-height: 1.15; text-overflow: ellipsis; }
+.timed-event strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: .74rem;
+  line-height: 1.15;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 .timed-event.pcr { color: #56358e; background: #eee8f8; border-left-color: #6f42c1; }
 .timed-event.cloning { color: #166c54; background: #e1f5ee; border-left-color: #20a77d; }
 .timed-event.cell_passage { color: #88450e; background: #fff0e2; border-left-color: #df7315; }
@@ -431,9 +438,10 @@
 
 .plan-card {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto;
-  gap: .65rem;
-  padding: .65rem;
+  grid-template-columns: 70px minmax(0, 1fr);
+  column-gap: .6rem;
+  row-gap: .25rem;
+  padding: .55rem .6rem;
   border: 1px solid var(--planner-border);
   border-left: 4px solid var(--planner-accent);
   border-radius: .25rem;
@@ -444,8 +452,9 @@
 }
 
 .plan-card h3 {
-  margin-bottom: .35rem;
-  font-size: .95rem;
+  margin-bottom: .2rem;
+  font-size: .88rem;
+  line-height: 1.25;
 }
 
 .plan-card-time {
@@ -473,13 +482,16 @@
 
 .plan-card-actions {
   display: flex;
-  flex-direction: column;
+  grid-column: 2;
+  flex-direction: row;
   gap: .35rem;
+  justify-content: flex-end;
 }
 
 .plan-card-actions .btn {
-  min-height: 30px;
-  padding: .2rem .55rem;
+  width: 30px;
+  min-height: 28px;
+  padding: .15rem;
 }
 
 .plan-card p,

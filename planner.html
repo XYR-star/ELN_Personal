@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/styles.css?v=20260721-calendar2'>
+<link rel='stylesheet' href='/planner-assets/styles.css?v=20260721-visual1'>
 <link rel='stylesheet' href='/planner-assets/todos.css?v=20260624-todo1'>
 
 <div class='planner-embedded' data-planner-root data-api-base='/planner-api.php' data-lang='{{ plannerLang }}'>
@@ -17,7 +17,7 @@
         <div class='text-muted small'>Mixed quick tasks for today, later, or no fixed date.</div>
       </div>
     </div>
-    <details class='todo-composer' data-todo-composer open>
+    <details class='todo-composer' data-todo-composer>
       <summary>{{ App.getLang() starts with 'zh' ? '添加待办' : 'Add todo' }}</summary>
       <form class='todo-form' data-todo-form>
         <input type='hidden' data-todo-id>
@@ -116,6 +116,6 @@
   </form>
 </dialog>
 
-<script type='module' src='/planner-assets/app.js?v=20260721-calendar2'></script>
+<script type='module' src='/planner-assets/app.js?v=20260721-visual1'></script>
 <script defer src='/planner-assets/todos.js?v=20260624-todo1'></script>
 {% endblock %}

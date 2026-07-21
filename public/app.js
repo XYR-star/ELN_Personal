@@ -11,7 +11,7 @@ const WEEKDAY_KEYS = ['weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu'
 const APP_TIME_ZONE = 'Asia/Shanghai';
 const CALENDAR_START_HOUR = 7;
 const CALENDAR_END_HOUR = 22;
-const HOUR_HEIGHT = 56;
+const HOUR_HEIGHT = 60;
 
 function todayInAppTimeZone() {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -123,8 +123,10 @@ function addDays(date, count) {
 }
 
 function addMonths(date, count) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + count);
+  const day = date.getDate();
+  const next = new Date(date.getFullYear(), date.getMonth() + count, 1, date.getHours(), date.getMinutes());
+  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(day, lastDay));
   return next;
 }
 
@@ -158,6 +160,11 @@ function planTime(plan) {
   const start = fromInputValue(plan.start);
   const end = plan.end ? fromInputValue(plan.end) : null;
   return `${pad(start.getHours())}:${pad(start.getMinutes())}${end ? `-${pad(end.getHours())}:${pad(end.getMinutes())}` : ''}`;
+}
+
+function planStartTime(plan) {
+  const start = fromInputValue(plan.start);
+  return `${pad(start.getHours())}:${pad(start.getMinutes())}`;
 }
 
 function planDurationMinutes(plan) {
@@ -283,9 +290,9 @@ function renderTimedEvent({ plan, lane, lanes }) {
   const height = Math.max(24, ((visibleEnd - visibleStart) / 60) * HOUR_HEIGHT - 2);
   const width = 100 / lanes;
   return `
-    <button class="timed-event ${escapeHtml(plan.type)} ${escapeHtml(plan.status)}" data-id="${plan.id}" type="button"
+    <button class="timed-event ${escapeHtml(plan.type)} ${escapeHtml(plan.status)}" data-id="${plan.id}" type="button" title="${planTime(plan)} ${escapeHtml(plan.title)}"
       style="top:${top}px;height:${height}px;left:calc(${lane * width}% + 2px);width:calc(${width}% - 4px)">
-      <span>${planTime(plan)}</span><strong>${escapeHtml(plan.title)}</strong>
+      <span>${planStartTime(plan)}</span><strong>${escapeHtml(plan.title)}</strong>
     </button>
   `;
 }
@@ -577,17 +584,32 @@ function bindControls() {
     await loadPlans();
   });
   $('#prev-button').addEventListener('click', async () => {
-    state.cursor = state.view === 'month' ? addMonths(state.cursor, -1) : addDays(state.cursor, state.view === 'week' ? -7 : -1);
+    if (state.view === 'month') {
+      state.cursor = addMonths(state.cursor, -1);
+      state.selectedDate = addMonths(state.selectedDate, -1);
+    } else {
+      const offset = state.view === 'week' ? -7 : -1;
+      state.cursor = addDays(state.cursor, offset);
+      state.selectedDate = addDays(state.selectedDate, offset);
+    }
     await loadPlans();
   });
   $('#next-button').addEventListener('click', async () => {
-    state.cursor = state.view === 'month' ? addMonths(state.cursor, 1) : addDays(state.cursor, state.view === 'week' ? 7 : 1);
+    if (state.view === 'month') {
+      state.cursor = addMonths(state.cursor, 1);
+      state.selectedDate = addMonths(state.selectedDate, 1);
+    } else {
+      const offset = state.view === 'week' ? 7 : 1;
+      state.cursor = addDays(state.cursor, offset);
+      state.selectedDate = addDays(state.selectedDate, offset);
+    }
     await loadPlans();
   });
   $$('.segmented button').forEach((button) => {
     button.addEventListener('click', async () => {
       $$('.segmented button').forEach((item) => item.classList.remove('active'));
       button.classList.add('active');
+      state.cursor = new Date(state.selectedDate);
       state.view = button.dataset.view;
       await loadPlans();
     });
