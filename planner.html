@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block body %}
 <link rel='stylesheet' href='/planner-assets/styles.css?v=20260721-visual1'>
-<link rel='stylesheet' href='/planner-assets/todos.css?v=20260624-todo1'>
+<link rel='stylesheet' href='/planner-assets/todos.css?v=20260721-add-button1'>
 
 <div class='planner-embedded' data-planner-root data-api-base='/planner-api.php' data-lang='{{ plannerLang }}'>
   <section class='planner-actions-row'>
@@ -18,7 +18,7 @@
       </div>
     </div>
     <details class='todo-composer' data-todo-composer>
-      <summary>{{ App.getLang() starts with 'zh' ? '添加待办' : 'Add todo' }}</summary>
+      <summary><i class='fas fa-plus fa-fw mr-1'></i>{{ App.getLang() starts with 'zh' ? '添加待办' : 'Add todo' }}</summary>
       <form class='todo-form' data-todo-form>
         <input type='hidden' data-todo-id>
         <label>Task

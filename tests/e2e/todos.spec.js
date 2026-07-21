@@ -59,6 +59,8 @@ test('mixed todos can be edited in planner and shown on dashboard', async ({ pag
 
   await openAuthed(page, '/planner.php');
   await expect(page.locator('[data-todos-root][data-todo-mode="editor"]')).toBeVisible();
+  await expect(page.locator('[data-todo-composer] > summary')).toBeVisible();
+  await page.locator('[data-todo-composer] > summary').click();
   await page.locator('[data-todo-title]').fill(title);
   await page.locator('[data-todo-due-date]').fill('2026-06-24');
   await page.locator('[data-todo-pinned]').check();

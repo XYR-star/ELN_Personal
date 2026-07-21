@@ -63,8 +63,22 @@
 }
 
 .todo-composer > summary {
-  display: none;
+  display: inline-flex;
+  min-height: 34px;
+  margin-bottom: .75rem;
+  padding: .3rem .65rem;
+  align-items: center;
+  color: #fff;
+  font-weight: 700;
+  background: #29aeb9;
+  border-radius: .25rem;
+  cursor: pointer;
+  list-style: none;
 }
+
+.todo-composer > summary::-webkit-details-marker { display: none; }
+.todo-composer > summary:hover { background: #238f98; }
+.todo-composer:not([open]) > summary { margin-bottom: .75rem; }
 
 .todo-form {
   display: grid;
@@ -179,18 +193,6 @@
   .dashboard-grid > [class*='col-'] {
     padding-right: 0;
     padding-left: 0;
-  }
-
-  .todo-composer > summary {
-    display: list-item;
-    margin-bottom: .75rem;
-    color: #343a40;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .todo-composer:not([open]) > summary {
-    margin-bottom: 0;
   }
 
   .todo-form,
