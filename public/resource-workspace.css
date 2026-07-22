@@ -5,6 +5,53 @@
 
 .resource-native-list[hidden] { display: none !important; }
 
+.resource-search-row { align-items: flex-start; }
+
+.resource-filter-toggle-wrap { flex: 0 0 auto; margin: 0 0 .5rem .5rem; }
+
+.resource-filter-toggle {
+  position: relative;
+  width: 42px;
+  height: 38px;
+  padding: 0;
+}
+
+.resource-filter-toggle.active { color: #fff; background: #167c85; }
+
+.resource-filter-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  color: #fff;
+  font-size: .65rem;
+  line-height: 1;
+  background: #b34030;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.resource-filter-section[hidden] { display: none !important; }
+
+.resource-common-filter-row {
+  gap: .5rem;
+  margin: 0 0 .75rem;
+  padding: .75rem;
+  align-items: flex-start;
+  background: #f5f6f7;
+  border: 1px solid #d8dde1;
+  border-radius: 4px;
+}
+
+.resource-common-filter-row #queryForm { min-width: 0; flex: 1 1 auto; }
+.resource-common-filter-row #visibleFiltersDiv { margin-top: 0 !important; }
+.resource-more-filter-wrap { flex: 0 0 auto; }
+.resource-more-filter-toggle { min-height: 38px; }
+.resource-more-filter-toggle.active { color: #fff; background: #167c85; }
+
 .resource-workspace {
   --resource-accent: #29aeb9;
   --resource-accent-dark: #167c85;
@@ -67,9 +114,12 @@
 }
 
 .resource-workspace-row.is-selected {
-  background: #eaf6f7;
+  background: #eaf6f7 !important;
   box-shadow: inset 4px 0 0 var(--resource-accent);
 }
+
+.resource-workspace-row:has([data-action="checkbox-entity"]:checked) { background: #edf8f9 !important; }
+.resource-workspace-row.is-selected:has([data-action="checkbox-entity"]:checked) { background: #eaf6f7 !important; }
 
 .resource-col-select { width: 42px; text-align: center; }
 .resource-col-title { width: 28%; }
@@ -151,6 +201,58 @@
   background: #f4f5f6;
   border-bottom: 1px solid #cbd1d6;
 }
+
+.resource-selection-control {
+  margin-left: auto;
+  padding: 0 .35rem;
+  text-transform: none;
+}
+
+.resource-selection-control[hidden] { display: none !important; }
+
+.resource-bulk-trigger {
+  display: inline-flex;
+  height: 32px;
+  padding: 0 .55rem;
+  gap: .3rem;
+  align-items: center;
+  font-size: .74rem;
+  font-weight: 700;
+}
+
+.resource-bulk-dialog {
+  width: min(960px, calc(100vw - 32px));
+  max-width: 960px;
+  max-height: 82vh;
+  padding: 0;
+  overflow: auto;
+  color: #2b3035;
+  background: #fff;
+  border: 1px solid #bcc3c8;
+  border-radius: 6px;
+  box-shadow: 0 18px 55px rgb(0 0 0 / 28%);
+}
+
+.resource-bulk-dialog::backdrop { background: rgb(0 0 0 / 42%); }
+
+.resource-bulk-dialog-head {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  min-height: 52px;
+  padding: .65rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  background: #f4f5f6;
+  border-bottom: 1px solid #d8dde1;
+}
+
+.resource-bulk-dialog-head h2 { margin: 0; font-size: 1rem; font-weight: 700; }
+.resource-bulk-dialog-body { padding: 1rem; }
+.resource-bulk-dialog #withSelected > .row:first-child { display: none; }
+.resource-bulk-dialog #withSelected .row { margin-right: 0 !important; margin-left: 0 !important; }
+.resource-bulk-dialog #withSelected .form-inline { gap: .25rem 0; }
 
 .resource-location-close { display: none; }
 
@@ -320,6 +422,12 @@
 
   body.resource-location-sheet-open { overflow: hidden; }
 
+  .resource-search-row { align-items: flex-start; }
+  .resource-filter-toggle-wrap { margin-left: .35rem; }
+  .resource-common-filter-row { display: block !important; padding: .6rem; }
+  .resource-common-filter-row #visibleFiltersDiv { display: grid; grid-template-columns: 1fr; }
+  .resource-more-filter-wrap { margin-top: .5rem; text-align: right; }
+
   .resource-workspace {
     display: block;
     min-height: 0;
@@ -393,6 +501,21 @@
   }
 
   .resource-location-backdrop.is-open { pointer-events: auto; opacity: 1; }
+
+  .resource-bulk-dialog {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 86vh;
+    margin: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .resource-bulk-dialog-body { padding: .75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

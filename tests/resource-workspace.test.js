@@ -18,6 +18,9 @@ test('resource workspace preserves native resource controls while adding locatio
   assert.match(script, /data-action="toggle-pin"/);
   assert.match(script, /className = 'entity resource-workspace-row'/);
   assert.match(script, /resource\.checkbox\.addEventListener\('change'/);
+  assert.match(script, /createSelectionTools/);
+  assert.match(script, /setupResourceFilters/);
+  assert.match(script, /showModal\(\)/);
   assert.match(script, /resource-locations\?item_ids=/);
   assert.match(script, /MutationObserver/);
   assert.match(script, /locations\/\$\{assignment\.location_id\}\/view/);
@@ -28,5 +31,7 @@ test('resource workspace has desktop split view and mobile location sheet', () =
   assert.match(styles, /grid-template-columns:\s*minmax\(0, 3fr\) minmax\(320px, 2fr\)/);
   assert.match(styles, /@media \(max-width: 767\.98px\)/);
   assert.match(styles, /\.resource-location-panel\.is-open/);
+  assert.match(styles, /\.resource-bulk-dialog/);
+  assert.match(styles, /\.resource-filter-toggle/);
   assert.match(styles, /position:\s*fixed/);
 });

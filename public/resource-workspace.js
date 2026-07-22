@@ -10,13 +10,15 @@ if (info) {
     unassigned: '未分配', loading: '读取中', storageLocation: '存放位置', noSelection: '尚未选择资源',
     noAssignment: '该资源尚未分配存放位置', assigned: '处存放位置', quantity: '数量', openResource: '打开资源',
     manageStorage: '管理存放', close: '关闭位置详情', emptyGrid: '该位置没有网格', loadFailed: '位置读取失败',
-    edit: '编辑', pin: '置顶', selectedSlot: '当前孔位', otherSlot: '已占用', childSlot: '下级位置'
+    edit: '编辑', pin: '置顶', selectedSlot: '当前孔位', otherSlot: '已占用', childSlot: '下级位置',
+    filters: '筛选', moreFilters: '高级筛选', selected: '已选', bulkActions: '批量操作', closeBulk: '关闭批量操作'
   } : {
     resource: 'Resource', category: 'Category', status: 'Status', updated: 'Updated', location: 'Location', actions: 'Actions',
     unassigned: 'Unassigned', loading: 'Loading', storageLocation: 'Storage location', noSelection: 'No resource selected',
     noAssignment: 'No storage location assigned', assigned: 'assigned locations', quantity: 'Quantity', openResource: 'Open resource',
     manageStorage: 'Manage storage', close: 'Close location details', emptyGrid: 'This location has no grid', loadFailed: 'Could not load location',
-    edit: 'Edit', pin: 'Pin', selectedSlot: 'Selected slot', otherSlot: 'Occupied', childSlot: 'Child location'
+    edit: 'Edit', pin: 'Pin', selectedSlot: 'Selected slot', otherSlot: 'Occupied', childSlot: 'Child location',
+    filters: 'Filters', moreFilters: 'More filters', selected: 'selected', bulkActions: 'Batch actions', closeBulk: 'Close batch actions'
   };
 
   const state = {
@@ -27,6 +29,8 @@ if (info) {
     selectedAssignmentId: null,
     panel: null,
     backdrop: null,
+    selectionControl: null,
+    bulkDialog: null,
     refreshToken: 0
   };
 
@@ -158,6 +162,7 @@ if (info) {
     const select = () => selectResource(resource.id, true);
     resource.checkbox.addEventListener('change', () => {
       if (resource.checkbox.checked) select();
+      updateSelectionTools();
     });
     titleLink.addEventListener('click', (event) => {
       if (!window.matchMedia('(max-width: 767.98px)').matches) return;
@@ -196,6 +201,53 @@ if (info) {
     return panel;
   }
 
+  function selectedCountLabel(count) {
+    return isChinese ? `${copy.selected} ${count}` : `${count} ${copy.selected}`;
+  }
+
+  function updateSelectionTools() {
+    if (!state.selectionControl) return;
+    const count = document.querySelectorAll('[data-action="checkbox-entity"]:checked').length;
+    const withSelected = document.getElementById('withSelected');
+    state.selectionControl.hidden = count === 0;
+    state.selectionControl.querySelector('[data-resource-selected-count]').textContent = selectedCountLabel(count);
+    if (withSelected) withSelected.classList.toggle('d-none', count === 0);
+    if (count === 0 && state.bulkDialog?.open) state.bulkDialog.close();
+  }
+
+  function createSelectionTools(workspace) {
+    const withSelected = document.getElementById('withSelected');
+    if (!withSelected || !state.panel) return;
+
+    state.selectionControl = document.createElement('div');
+    state.selectionControl.className = 'resource-selection-control';
+    state.selectionControl.hidden = true;
+    state.selectionControl.innerHTML = `
+      <button class="btn btn-sm btn-secondary resource-bulk-trigger" type="button" title="${escapeHtml(copy.bulkActions)}" aria-label="${escapeHtml(copy.bulkActions)}">
+        <i class="fas fa-list-check fa-fw" aria-hidden="true"></i>
+        <span data-resource-selected-count>${escapeHtml(selectedCountLabel(0))}</span>
+      </button>`;
+    const panelHead = state.panel.querySelector('.resource-location-panel-head');
+    panelHead.insertBefore(state.selectionControl, panelHead.querySelector('.resource-location-close'));
+
+    state.bulkDialog = document.createElement('dialog');
+    state.bulkDialog.className = 'resource-bulk-dialog';
+    state.bulkDialog.innerHTML = `
+      <header class="resource-bulk-dialog-head">
+        <h2>${escapeHtml(copy.bulkActions)}</h2>
+        <button class="btn btn-sm btn-secondary" type="button" data-resource-bulk-close title="${escapeHtml(copy.closeBulk)}" aria-label="${escapeHtml(copy.closeBulk)}"><i class="fas fa-xmark fa-fw" aria-hidden="true"></i></button>
+      </header>
+      <div class="resource-bulk-dialog-body"></div>`;
+    state.bulkDialog.querySelector('.resource-bulk-dialog-body').append(withSelected);
+    state.bulkDialog.querySelector('[data-resource-bulk-close]').addEventListener('click', () => state.bulkDialog.close());
+    state.selectionControl.querySelector('.resource-bulk-trigger').addEventListener('click', () => {
+      updateSelectionTools();
+      if (!state.bulkDialog.open) state.bulkDialog.showModal();
+    });
+    workspace.append(state.bulkDialog);
+    updateSelectionTools();
+  }
+
   function renderWorkspace(source, resources) {
     const host = source.closest('.table-container') || source;
     host.hidden = true;
@@ -224,7 +276,9 @@ if (info) {
     tablePanel.append(table);
     state.panel = createPanel();
     workspace.append(tablePanel, state.panel);
+    createSelectionTools(workspace);
     host.before(workspace);
+    updateSelectionTools();
 
     state.backdrop = document.createElement('button');
     state.backdrop.type = 'button';
@@ -453,6 +507,67 @@ if (info) {
     hydrateLocations(resources, state.refreshToken);
   }
 
+  function setupResourceFilters() {
+    const mainSearchForm = document.getElementById('mainSearchForm');
+    const visibleFilters = document.getElementById('visibleFiltersDiv');
+    const advancedFilters = document.getElementById('filtersDiv');
+    const filterToggle = document.querySelector('[data-toggle-target="filtersDiv"]');
+    if (!mainSearchForm || !visibleFilters || !advancedFilters || !filterToggle || document.querySelector('.resource-filter-toggle')) return;
+
+    const searchRow = mainSearchForm.parentElement;
+    const commonRow = visibleFilters.closest('.d-flex.form-group');
+    const filterSection = commonRow?.parentElement;
+    const toggleWrapper = filterToggle.parentElement;
+    if (!searchRow || !commonRow || !filterSection || !toggleWrapper) return;
+
+    searchRow.classList.add('resource-search-row');
+    commonRow.classList.add('resource-common-filter-row');
+    filterSection.classList.add('resource-filter-section');
+    filterSection.hidden = true;
+    advancedFilters.hidden = true;
+
+    filterToggle.removeAttribute('data-action');
+    filterToggle.removeAttribute('data-toggle-target');
+    filterToggle.removeAttribute('data-closed-icon');
+    filterToggle.removeAttribute('data-opened-icon');
+    filterToggle.classList.add('resource-filter-toggle');
+    filterToggle.title = copy.filters;
+    filterToggle.setAttribute('aria-label', copy.filters);
+    filterToggle.setAttribute('aria-expanded', 'false');
+
+    const filterKeys = ['category', 'status', 'owner', 'tags[]', 'metakey', 'metavalue', 'date', 'dateTo', 'visibility', 'locked', 'timestamped', 'rating'];
+    const query = new URLSearchParams(window.location.search);
+    const activeCount = filterKeys.filter((key) => query.has(key) && query.getAll(key).some(Boolean)).length;
+    filterToggle.innerHTML = `<i class="fas fa-sliders fa-fw" aria-hidden="true"></i>${activeCount ? `<span class="resource-filter-count">${activeCount}</span>` : ''}`;
+    toggleWrapper.className = 'resource-filter-toggle-wrap';
+    const helpWrapper = mainSearchForm.nextElementSibling;
+    searchRow.insertBefore(toggleWrapper, helpWrapper);
+
+    const moreWrapper = document.createElement('div');
+    moreWrapper.className = 'resource-more-filter-wrap';
+    moreWrapper.innerHTML = `<button class="btn btn-sm btn-secondary resource-more-filter-toggle" type="button" aria-expanded="false"><i class="fas fa-ellipsis fa-fw mr-1" aria-hidden="true"></i>${escapeHtml(copy.moreFilters)}</button>`;
+    commonRow.append(moreWrapper);
+    const moreToggle = moreWrapper.querySelector('button');
+
+    filterToggle.addEventListener('click', () => {
+      const open = filterSection.hidden;
+      filterSection.hidden = !open;
+      filterToggle.setAttribute('aria-expanded', String(open));
+      filterToggle.classList.toggle('active', open);
+      if (!open) {
+        advancedFilters.hidden = true;
+        moreToggle.setAttribute('aria-expanded', 'false');
+        moreToggle.classList.remove('active');
+      }
+    });
+    moreToggle.addEventListener('click', () => {
+      const open = advancedFilters.hidden;
+      advancedFilters.hidden = !open;
+      moreToggle.setAttribute('aria-expanded', String(open));
+      moreToggle.classList.toggle('active', open);
+    });
+  }
+
   let refreshQueued = false;
   const observer = new MutationObserver(() => {
     if (refreshQueued) return;
@@ -466,6 +581,7 @@ if (info) {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeMobilePanel();
   });
+  setupResourceFilters();
   observer.observe(document.getElementById('showModeContent'), { childList: true, subtree: true });
   initializeWorkspace();
 }

@@ -32,6 +32,14 @@ test('resource table and storage preview preserve native controls', async ({ pag
 
   const workspace = page.locator('.resource-workspace');
   await expect(workspace).toBeVisible();
+  await expect(page.locator('.resource-filter-section')).toBeHidden();
+  await page.locator('.resource-filter-toggle').click();
+  await expect(page.locator('.resource-filter-section')).toBeVisible();
+  await expect(page.locator('#filtersDiv')).toBeHidden();
+  await page.locator('.resource-more-filter-toggle').click();
+  await expect(page.locator('#filtersDiv')).toBeVisible();
+  await page.locator('.resource-filter-toggle').click();
+  await expect(page.locator('.resource-filter-section')).toBeHidden();
   const rows = workspace.locator('.resource-workspace-row');
   expect(await rows.count()).toBeGreaterThan(0);
   const firstRow = rows.first();
@@ -40,6 +48,7 @@ test('resource table and storage preview preserve native controls', async ({ pag
   await expect(location).not.toHaveClass(/is-loading/);
 
   const checkbox = firstRow.locator('[data-action="checkbox-entity"]');
+  const workspaceTop = await workspace.evaluate((node) => node.getBoundingClientRect().top);
   await checkbox.click();
   await expect(page.locator('.resource-location-summary h2')).toHaveText(title);
   if (await location.evaluate((node) => node.classList.contains('is-assigned'))) {
@@ -48,9 +57,16 @@ test('resource table and storage preview preserve native controls', async ({ pag
     await expect(page.locator('.resource-location-empty.is-unassigned')).toBeVisible();
   }
 
+  await expect(page.locator('.resource-selection-control')).toBeVisible();
+  await expect(page.locator('.resource-bulk-dialog')).not.toBeVisible();
+  expect(await workspace.evaluate((node) => node.getBoundingClientRect().top)).toBe(workspaceTop);
+  await page.locator('.resource-bulk-trigger').click();
+  await expect(page.locator('.resource-bulk-dialog')).toBeVisible();
   await expect(page.locator('#withSelected')).toBeVisible();
+  await page.locator('[data-resource-bulk-close]').click();
   await checkbox.click();
   await expect(page.locator('#withSelected')).toBeHidden();
+  await expect(page.locator('.resource-selection-control')).toBeHidden();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
@@ -68,6 +84,16 @@ test('mobile resource title opens and closes the location sheet', async ({ page 
   expect(page.url()).toBe(before);
   await page.locator('.resource-location-close').click();
   await expect(page.locator('.resource-location-panel')).not.toHaveClass(/is-open/);
+
+  const checkbox = page.locator('.resource-workspace-row [data-action="checkbox-entity"]').first();
+  await checkbox.click();
+  await expect(page.locator('.resource-location-panel')).toHaveClass(/is-open/);
+  await page.locator('.resource-bulk-trigger').click();
+  await expect(page.locator('.resource-bulk-dialog')).toBeVisible();
+  await page.locator('[data-resource-bulk-close]').click();
+  await expect(page.locator('.resource-location-panel')).toHaveClass(/is-open/);
+  await page.locator('.resource-location-close').click();
+  await checkbox.click();
 });
 
 test('resource workspace assets stay off unrelated pages', async ({ page }) => {
