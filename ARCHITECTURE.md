@@ -23,11 +23,13 @@ modified in place.
 
 ## Upgrade-sensitive surfaces
 
-The following full-template overrides are coupled to the eLabFTW release:
+The following native-template overrides are coupled to the eLabFTW release:
 
 - `dashboard.html`
 - `edit.html`
 - `head.html`
+- `scope-button.html`
+- `storage-view-edit.html`
 - `view.html`
 
 `storage-map-api.php` also uses native `items`, `storage_units`, and
@@ -39,7 +41,7 @@ surface.
 
 1. Create and verify a backup with `sudo ops/backup.sh`.
 2. Pull the candidate image without changing the running container.
-3. Compare its four templates with `ops/upstream-templates.sha256`.
+3. Compare its six overridden native templates with `ops/upstream-templates.sha256`.
 4. Review upstream database migrations affecting the storage tables.
 5. Run `npm test` and the Playwright tests against a staging instance.
 6. Update the image digest in Compose and deploy.

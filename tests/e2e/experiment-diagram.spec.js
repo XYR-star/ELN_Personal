@@ -89,6 +89,7 @@ test('experiment edit page exposes a local diagram panel after the primary edito
 
     await expect(page.locator('[data-experiment-diagram-root]')).toBeVisible();
     await expect(page.locator('[data-experiment-diagram-root]')).toContainText(/Experiment diagram|实验流程图/);
+    await expect(page.locator('link[href*="/planner-assets/experiment-diagram-vendor.css"]')).toHaveCount(1);
     const editor = page.locator('[data-silverbullet-editor-root]');
     await expect(editor).toBeVisible();
 
@@ -167,6 +168,13 @@ test('SilverBullet-style editor syncs markdown source after saving main text', a
     }, experimentId);
     expect(source.markdown).toContain(markdown);
     expect(source.relative_path).toBe(`ELN/Experiments/${experimentId}.md`);
+    await expect.poll(async () => page.evaluate(async (id) => {
+      const response = await fetch(`/api/v2/experiments/${id}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!response.ok) throw new Error(`native body read failed ${response.status}`);
+      return (await response.json()).body || '';
+    }, experimentId)).toContain(markdown.split('\n')[0].slice(2));
     expect(errors).toEqual([]);
   } finally {
     await deleteTempExperiment(page, experimentId);

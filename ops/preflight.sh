@@ -5,7 +5,7 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 COMPOSE_FILE=${ELAB_COMPOSE_FILE:-/root/elabftw/docker-compose.yml}
 IMAGE=${ELAB_IMAGE:-elabftw/elabimg@sha256:500b0bcaed1b3b9f825d5272cd517072cd32f3e22d5dc68ec6f72f5a532cb745}
 BASELINE="$ROOT_DIR/ops/upstream-templates.sha256"
-TEMPLATES=(dashboard.html edit.html head.html view.html)
+TEMPLATES=(dashboard.html edit.html head.html scope-button.html storage-view-edit.html view.html)
 
 cd "$ROOT_DIR"
 
@@ -27,10 +27,18 @@ curl --fail --silent --show-error http://127.0.0.1:4044/api/health \
   | node -e 'let s=""; process.stdin.on("data", d => s += d).on("end", () => { const v = JSON.parse(s); if (!v.ok) process.exit(1); });'
 
 echo '[5/6] Mounted overrides'
-for template in "${TEMPLATES[@]}"; do
-  test -f "/www/elabftw-data/overrides/$template"
-  cmp --silent "$ROOT_DIR/$template" "/www/elabftw-data/overrides/$template"
-done
+while IFS= read -r runtime_name; do
+  source_name=$runtime_name
+  case "$runtime_name" in
+    planner.php) source_name=elabftw-planner.php ;;
+    planner-api.php) source_name=elabftw-planner-api.php ;;
+  esac
+  test -f "$ROOT_DIR/$source_name"
+  cmp --silent "$ROOT_DIR/$source_name" "/www/elabftw-data/overrides/$runtime_name"
+done < <(
+  docker compose -f "$COMPOSE_FILE" config --format json \
+    | node -e 'let s=""; process.stdin.on("data", d => s += d).on("end", () => { const c = JSON.parse(s); for (const v of c.services.web.volumes || []) { if (v.type === "bind" && v.source.startsWith("/www/elabftw-data/overrides/")) console.log(v.source.split("/").pop()); } });'
+)
 
 echo '[6/6] Upstream template baseline'
 tmp=$(mktemp -d)

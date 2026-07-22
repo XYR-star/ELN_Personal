@@ -16,6 +16,14 @@ test('experiment editor puts the primary markdown editor before supporting tools
   assert.match(template, /data-native-main-text-section/);
 });
 
+test('experiment diagram lets the module loader own its vendor stylesheet', () => {
+  const template = read('experiment-diagram.html');
+  const entry = read('public/experiment-diagram.js');
+
+  assert.doesNotMatch(template, /experiment-diagram-vendor\.css/);
+  assert.match(entry, /experiment-diagram-vendor\.css/);
+});
+
 test('native main text fallback is hidden as one section by the markdown editor', () => {
   const script = read('public/silverbullet-editor.js');
 

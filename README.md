@@ -189,6 +189,7 @@ Current important override:
 /www/elabftw-data/overrides/ideas.php
 /www/elabftw-data/overrides/drive-links.html
 /www/elabftw-data/overrides/drive-links-api.php
+/www/elabftw-data/overrides/scope-button.html
 /www/elabftw-data/overrides/storage-map.html
 /www/elabftw-data/overrides/storage-view-edit.html
 ```

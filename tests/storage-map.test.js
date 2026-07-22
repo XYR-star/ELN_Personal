@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildStorageView, defaultChildLocationForSlot, prepareStorageItemResults, validateSlotCode } from '../src/storage-map.js';
+import { buildStorageView, defaultChildLocationForSlot, prepareStorageItemResults, validateSlotCode } from '../public/storage-map-core.js';
 
 test('buildStorageView maps child locations and eLabFTW resources into slots', () => {
   const view = buildStorageView({
