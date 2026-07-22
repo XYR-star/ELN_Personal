@@ -26,9 +26,12 @@ test('native main text fallback is hidden as one section by the markdown editor'
 test('planner todo composer can collapse on mobile', () => {
   const template = read('planner.html');
   const script = read('public/todos.js');
+  const styles = read('public/todos.css');
 
   assert.match(template, /<details[^>]+data-todo-composer/);
   assert.match(script, /matchMedia\('\(max-width: 575\.98px\)'\)/);
+  assert.match(styles, /\.planner-todos\s*\{[\s\S]*?position:\s*relative/);
+  assert.match(styles, /\.todo-composer > summary\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?right:\s*\.85rem/);
 });
 
 test('dashboard grid has a scoped class for mobile overflow containment', () => {

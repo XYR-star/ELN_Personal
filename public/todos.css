@@ -42,6 +42,7 @@
 }
 
 .planner-todos {
+  position: relative;
   margin-bottom: 1rem;
   padding: .85rem;
   background: #fff;
@@ -55,6 +56,7 @@
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: .75rem;
+  padding-right: 7.25rem;
 }
 
 .planner-todos-head h2 {
@@ -63,9 +65,12 @@
 }
 
 .todo-composer > summary {
+  position: absolute;
+  top: .85rem;
+  right: .85rem;
   display: inline-flex;
   min-height: 34px;
-  margin-bottom: .75rem;
+  margin: 0;
   padding: .3rem .65rem;
   align-items: center;
   color: #fff;
@@ -78,7 +83,7 @@
 
 .todo-composer > summary::-webkit-details-marker { display: none; }
 .todo-composer > summary:hover { background: #238f98; }
-.todo-composer:not([open]) > summary { margin-bottom: .75rem; }
+.todo-composer[open] { margin-bottom: .75rem; }
 
 .todo-form {
   display: grid;
@@ -164,6 +169,11 @@
 }
 
 @media (max-width: 575.98px) {
+  .planner-todos-head {
+    min-height: 3.5rem;
+    padding-right: 7rem;
+  }
+
   .dashboard-today {
     padding: .85rem;
   }
