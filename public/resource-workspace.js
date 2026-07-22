@@ -1,4 +1,4 @@
-import { buildStorageView } from './storage-map-core.js?v=20260616-ui1';
+import { buildStorageView, generateSlotGrid } from './storage-map-core.js?v=20260616-ui1';
 
 const info = document.querySelector('#info[data-page="show"][data-type="items"]');
 
@@ -11,14 +11,16 @@ if (info) {
     noAssignment: '该资源尚未分配存放位置', assigned: '处存放位置', quantity: '数量', openResource: '打开资源',
     manageStorage: '管理存放', close: '关闭位置详情', emptyGrid: '该位置没有网格', loadFailed: '位置读取失败',
     edit: '编辑', pin: '置顶', selectedSlot: '当前孔位', otherSlot: '已占用', childSlot: '下级位置',
-    filters: '筛选', moreFilters: '高级筛选', selected: '已选', bulkActions: '批量操作', closeBulk: '关闭批量操作'
+    filters: '筛选', moreFilters: '高级筛选', selected: '已选', bulkActions: '批量操作', closeBulk: '关闭批量操作',
+    deleteSelected: '删除选中资源', freezer: '冰箱', drawer: '抽屉', box: '盒子', localRows: '局部孔位'
   } : {
     resource: 'Resource', category: 'Category', status: 'Status', updated: 'Updated', location: 'Location', actions: 'Actions',
     unassigned: 'Unassigned', loading: 'Loading', storageLocation: 'Storage location', noSelection: 'No resource selected',
     noAssignment: 'No storage location assigned', assigned: 'assigned locations', quantity: 'Quantity', openResource: 'Open resource',
     manageStorage: 'Manage storage', close: 'Close location details', emptyGrid: 'This location has no grid', loadFailed: 'Could not load location',
     edit: 'Edit', pin: 'Pin', selectedSlot: 'Selected slot', otherSlot: 'Occupied', childSlot: 'Child location',
-    filters: 'Filters', moreFilters: 'More filters', selected: 'selected', bulkActions: 'Batch actions', closeBulk: 'Close batch actions'
+    filters: 'Filters', moreFilters: 'More filters', selected: 'selected', bulkActions: 'Batch actions', closeBulk: 'Close batch actions',
+    deleteSelected: 'Delete selected resources', freezer: 'Freezer', drawer: 'Drawer', box: 'Box', localRows: 'Local slots'
   };
 
   const state = {
@@ -226,7 +228,8 @@ if (info) {
       <button class="btn btn-sm btn-secondary resource-bulk-trigger" type="button" title="${escapeHtml(copy.bulkActions)}" aria-label="${escapeHtml(copy.bulkActions)}">
         <i class="fas fa-list-check fa-fw" aria-hidden="true"></i>
         <span data-resource-selected-count>${escapeHtml(selectedCountLabel(0))}</span>
-      </button>`;
+      </button>
+      <button class="btn btn-sm btn-danger resource-selection-delete" type="button" data-action="patch-selected-entities" data-what="destroy" title="${escapeHtml(copy.deleteSelected)}" aria-label="${escapeHtml(copy.deleteSelected)}"><i class="fas fa-trash fa-fw" aria-hidden="true"></i></button>`;
     const panelHead = state.panel.querySelector('.resource-location-panel-head');
     panelHead.insertBefore(state.selectionControl, panelHead.querySelector('.resource-location-close'));
 
@@ -364,17 +367,65 @@ if (info) {
       </div>`;
   }
 
+  function locationKindLabel(location) {
+    return ({ freezer: copy.freezer, drawer: copy.drawer, box: copy.box })[location?.kind] || copy.location;
+  }
+
+  function visibleRange(selected, total, size) {
+    const safeSize = Math.min(Math.max(1, size), total);
+    const start = Math.max(1, Math.min(selected - Math.floor(safeSize / 2), total - safeSize + 1));
+    return Array.from({ length: safeSize }, (_, index) => start + index);
+  }
+
+  function renderLocatorGrid(location, highlightCode) {
+    const rows = Number(location?.row_count || 0);
+    const columns = Number(location?.column_count || 0);
+    if (!rows || !columns) return '';
+    const slots = generateSlotGrid(rows, columns);
+    const cells = ['<span class="resource-context-axis resource-context-corner"></span>'];
+    for (let column = 1; column <= columns; column += 1) cells.push(`<span class="resource-context-axis">${column}</span>`);
+    for (let row = 1; row <= rows; row += 1) {
+      const rowSlots = slots.filter((slot) => slot.row === row);
+      cells.push(`<span class="resource-context-axis">${escapeHtml(rowSlots[0]?.rowLabel || '')}</span>`);
+      rowSlots.forEach((slot) => {
+        const selected = slot.code === String(highlightCode || '').toUpperCase();
+        cells.push(`<span class="resource-context-slot${selected ? ' is-selected' : ''}" title="${escapeHtml(slot.code)}">${selected ? escapeHtml(slot.code) : ''}</span>`);
+      });
+    }
+    return `<div class="resource-context-grid" style="--resource-context-columns:${columns}">${cells.join('')}</div>`;
+  }
+
+  function renderLocationContext(assignment) {
+    const trail = locationTrail(assignment.location_id);
+    const steps = [];
+    for (let index = 0; index < trail.length - 1; index += 1) {
+      const location = trail[index];
+      const child = trail[index + 1];
+      if (!location.row_count || !location.column_count || !child.position_code) continue;
+      const icon = location.kind === 'freezer' ? 'fa-temperature-low' : 'fa-layer-group';
+      steps.push(`
+        <section class="resource-context-locator">
+          <header><span><i class="fas ${icon} fa-fw" aria-hidden="true"></i>${escapeHtml(location.name)}</span><small>${escapeHtml(locationKindLabel(location))} · ${escapeHtml(child.position_code)}</small></header>
+          ${renderLocatorGrid(location, child.position_code)}
+        </section>`);
+    }
+    return steps.length ? `<div class="resource-location-context">${steps.join('')}</div>` : '';
+  }
+
   function renderMiniGrid(view, assignment) {
     if (!view?.slots?.length || !view.columns) {
       return `<div class="resource-mini-grid-empty">${escapeHtml(copy.emptyGrid)}</div>`;
     }
+    const selectedSlot = view.slots.find((slot) => slot.code === String(assignment.slot_code).toUpperCase()) || view.slots[0];
+    const visibleRows = visibleRange(selectedSlot.row, view.rows, 4);
+    const visibleColumns = visibleRange(selectedSlot.column, view.columns, 9);
     const cells = ['<span class="resource-grid-axis resource-grid-corner"></span>'];
-    for (let column = 1; column <= view.columns; column += 1) {
+    for (const column of visibleColumns) {
       cells.push(`<span class="resource-grid-axis">${column}</span>`);
     }
-    for (let row = 1; row <= view.rows; row += 1) {
-      const rowSlots = view.slots.filter((slot) => slot.row === row);
-      cells.push(`<span class="resource-grid-axis">${escapeHtml(rowSlots[0]?.rowLabel || '')}</span>`);
+    for (const row of visibleRows) {
+      const rowSlots = view.slots.filter((slot) => slot.row === row && visibleColumns.includes(slot.column));
+      cells.push(`<span class="resource-grid-axis is-row">${escapeHtml(rowSlots[0]?.rowLabel || '')}</span>`);
       rowSlots.forEach((slot) => {
         const selected = slot.code === String(assignment.slot_code).toUpperCase();
         const classes = ['resource-mini-slot'];
@@ -385,7 +436,12 @@ if (info) {
         cells.push(`<span class="${classes.join(' ')}" title="${escapeHtml(`${slot.code} · ${label}`)}"><span>${escapeHtml(slot.code)}</span></span>`);
       });
     }
-    return `<div class="resource-mini-grid" style="--resource-grid-columns:${view.columns}">${cells.join('')}</div>`;
+    const rowLabel = `${view.slots.find((slot) => slot.row === visibleRows[0])?.rowLabel || ''}–${view.slots.find((slot) => slot.row === visibleRows.at(-1))?.rowLabel || ''}`;
+    return `
+      <section class="resource-box-locator">
+        <header><span><i class="fas fa-border-all fa-fw" aria-hidden="true"></i>${escapeHtml(view.location.name)}</span><small>${escapeHtml(copy.localRows)} · ${escapeHtml(rowLabel)}</small></header>
+        <div class="resource-mini-grid" style="--resource-grid-columns:${visibleColumns.length}">${cells.join('')}</div>
+      </section>`;
   }
 
   async function renderAssignment(resource, assignment, assignments) {
@@ -411,6 +467,7 @@ if (info) {
         <span><small>${escapeHtml(copy.quantity)}</small><strong>${escapeHtml(assignment.qty_stored)} ${escapeHtml(assignment.qty_unit)}</strong></span>
         <span><small>${escapeHtml(copy.selectedSlot)}</small><strong>${escapeHtml(assignment.slot_code)}</strong></span>
       </div>
+      ${renderLocationContext(assignment)}
       <div class="resource-mini-grid-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
       <div class="resource-location-actions">
         <a class="btn btn-secondary" href="${escapeHtml(resource.viewHref)}"><i class="fas fa-arrow-up-right-from-square fa-fw mr-1" aria-hidden="true"></i>${escapeHtml(copy.openResource)}</a>
@@ -568,6 +625,35 @@ if (info) {
     });
   }
 
+  function simplifyNativeToolbar() {
+    const selectAll = document.querySelector('[data-action="toggle-select-all-entities"]');
+    const invertSelection = document.querySelector('[data-action="invert-entities-selection"]');
+    const expandAll = document.querySelector('[data-action="expand-all-entities"]');
+    const scopeButton = document.getElementById('scopeBtn');
+    const layoutToggle = document.querySelector('[data-action="toggle-items-layout"]');
+    const sortButton = document.querySelector('button[aria-label="Sort"]');
+    const resultsButton = document.querySelector('button[aria-label="Results per page"]');
+    if (!selectAll || !sortButton) return;
+
+    const hideControl = (element) => {
+      if (!element) return;
+      element.hidden = true;
+      element.classList.add('d-none');
+      element.setAttribute('aria-hidden', 'true');
+    };
+
+    hideControl(invertSelection);
+    hideControl(expandAll);
+    hideControl(expandAll?.previousElementSibling);
+    const scopeWrapper = scopeButton?.parentElement;
+    hideControl(scopeWrapper);
+    hideControl(scopeWrapper?.nextElementSibling);
+    hideControl(layoutToggle);
+    hideControl(layoutToggle?.nextElementSibling);
+    hideControl(resultsButton?.closest('.btn-group'));
+    sortButton.closest('.btn-group')?.parentElement?.parentElement?.classList.add('ml-auto');
+  }
+
   let refreshQueued = false;
   const observer = new MutationObserver(() => {
     if (refreshQueued) return;
@@ -582,6 +668,7 @@ if (info) {
     if (event.key === 'Escape') closeMobilePanel();
   });
   setupResourceFilters();
+  simplifyNativeToolbar();
   observer.observe(document.getElementById('showModeContent'), { childList: true, subtree: true });
   initializeWorkspace();
 }

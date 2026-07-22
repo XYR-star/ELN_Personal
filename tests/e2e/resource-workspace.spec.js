@@ -53,11 +53,14 @@ test('resource table and storage preview preserve native controls', async ({ pag
   await expect(page.locator('.resource-location-summary h2')).toHaveText(title);
   if (await location.evaluate((node) => node.classList.contains('is-assigned'))) {
     await expect(page.locator('.resource-mini-slot.is-selected')).toHaveCount(1);
+    expect(await page.locator('.resource-mini-grid .resource-grid-axis.is-row').count()).toBeLessThanOrEqual(4);
+    await expect(page.locator('.resource-context-locator').first()).toBeVisible();
   } else {
     await expect(page.locator('.resource-location-empty.is-unassigned')).toBeVisible();
   }
 
   await expect(page.locator('.resource-selection-control')).toBeVisible();
+  await expect(page.locator('.resource-selection-delete')).toBeVisible();
   await expect(page.locator('.resource-bulk-dialog')).not.toBeVisible();
   expect(await workspace.evaluate((node) => node.getBoundingClientRect().top)).toBe(workspaceTop);
   await page.locator('.resource-bulk-trigger').click();
@@ -67,6 +70,13 @@ test('resource table and storage preview preserve native controls', async ({ pag
   await checkbox.click();
   await expect(page.locator('#withSelected')).toBeHidden();
   await expect(page.locator('.resource-selection-control')).toBeHidden();
+
+  await expect(page.locator('[data-action="toggle-select-all-entities"]')).toBeVisible();
+  await expect(page.locator('[data-action="invert-entities-selection"]')).toBeHidden();
+  await expect(page.locator('[data-action="expand-all-entities"]')).toBeHidden();
+  await expect(page.locator('#scopeBtn')).toBeHidden();
+  await expect(page.locator('button[aria-label="Sort"]')).toBeVisible();
+  await expect(page.locator('button[aria-label="Results per page"]')).toBeHidden();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
