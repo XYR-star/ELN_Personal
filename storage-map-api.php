@@ -433,6 +433,34 @@ try {
         $req->bindValue(':team', $team, PDO::PARAM_INT);
         $Db->execute($req);
         storageJson($Response, $req->fetchAll());
+    } elseif ($method === 'GET' && $parts === array('resource-locations')) {
+        $rawItemIds = explode(',', (string) $Request->query->get('item_ids', ''));
+        $itemIds = array_values(array_unique(array_filter(array_map(
+            static fn(string $value): int => max(0, (int) trim($value)),
+            $rawItemIds
+        ))));
+        $itemIds = array_slice($itemIds, 0, 200);
+        if ($itemIds === array()) {
+            storageJson($Response, array());
+        } else {
+            $placeholders = array_map(static fn(int $index): string => ':item_' . $index, array_keys($itemIds));
+            $req = $Db->prepare(sprintf(
+                'SELECT a.id, a.location_id, a.slot_code, a.item_id, a.qty_stored, a.qty_unit, a.note, a.modified_at,
+                    l.name AS location_name, l.kind AS location_kind
+                 FROM ricky_storage_assignments a
+                 JOIN ricky_storage_locations l ON l.id = a.location_id AND l.team = a.team
+                 JOIN items i ON i.id = a.item_id AND i.team = a.team
+                 WHERE a.team = :team AND a.item_id IN (%s)
+                 ORDER BY a.item_id ASC, a.modified_at DESC, a.id DESC',
+                implode(', ', $placeholders)
+            ));
+            $req->bindValue(':team', $team, PDO::PARAM_INT);
+            foreach ($itemIds as $index => $itemId) {
+                $req->bindValue(':item_' . $index, $itemId, PDO::PARAM_INT);
+            }
+            $Db->execute($req);
+            storageJson($Response, $req->fetchAll());
+        }
     } elseif ($method === 'POST' && $parts === array('locations')) {
         $body = storageBody();
         $req = $Db->prepare('INSERT INTO ricky_storage_locations(team, parent_id, name, kind, layout_type, rows_count, columns_count, position_code, notes, created_by)

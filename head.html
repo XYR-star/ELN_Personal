@@ -27,6 +27,10 @@
   <link rel='stylesheet' media='all' href='/assets/vendor.min.css?v={{ v }}' />
   <link rel='stylesheet' media='all' href='/assets/elabftw.min.css?v={{ v }}' />
   <link rel='stylesheet' media='all' href='/planner-assets/eln-ux.css?v=20260711-ux1' />
+  {% if scriptName == 'database.php' and App.Request.query.get('mode') not in ['view', 'edit'] %}
+    <link rel='stylesheet' media='all' href='/planner-assets/resource-workspace.css?v=20260722-1' />
+    <script type='module' defer src='/planner-assets/resource-workspace.js?v=20260722-1'></script>
+  {% endif %}
   <style>@view-transition { navigation: auto; }</style>
 
   {# all js dependencies bundled by webpack (see builder.js) #}
