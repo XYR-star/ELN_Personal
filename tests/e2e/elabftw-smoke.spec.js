@@ -76,6 +76,16 @@ test('Planner renders calendar, selected list, and no browser errors', async ({ 
   await expect(page.locator('[data-todo-composer] > summary')).toBeVisible();
   await expect(page.locator('.day-cell, .time-day-column').first()).toBeVisible();
   await expect(page.locator('#calendar-grid')).not.toBeEmpty();
+  await expect(page.locator('.segmented button.active')).toHaveAttribute('aria-pressed', 'true');
+
+  const controlHeights = await page.locator([
+    '[data-todo-composer] > summary',
+    '#today-button',
+    '.segmented button',
+    '#search-input',
+    '#selected-new-plan-button'
+  ].join(', ')).evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
+  expect([...new Set(controlHeights)]).toEqual([38]);
 
   expect(errors).toEqual([]);
 });

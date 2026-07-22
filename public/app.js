@@ -606,10 +606,9 @@ function bindControls() {
   });
   $$('.segmented button').forEach((button) => {
     button.addEventListener('click', async () => {
-      $$('.segmented button').forEach((item) => item.classList.remove('active'));
-      button.classList.add('active');
       state.cursor = new Date(state.selectedDate);
       state.view = button.dataset.view;
+      syncViewButtons();
       await loadPlans();
     });
   });
@@ -634,9 +633,17 @@ function bindControls() {
   });
 }
 
+function syncViewButtons() {
+  $$('.segmented button').forEach((button) => {
+    const active = button.dataset.view === state.view;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+
 async function init() {
   applyTranslations();
-  $$('.segmented button').forEach((button) => button.classList.toggle('active', button.dataset.view === state.view));
+  syncViewButtons();
   bindControls();
   render();
   try {

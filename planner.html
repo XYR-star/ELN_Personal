@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block body %}
-<link rel='stylesheet' href='/planner-assets/styles.css?v=20260721-visual1'>
-<link rel='stylesheet' href='/planner-assets/todos.css?v=20260722-compact-head1'>
+<link rel='stylesheet' href='/planner-assets/styles.css?v=20260722-controls2'>
+<link rel='stylesheet' href='/planner-assets/todos.css?v=20260722-controls2'>
 
 <div class='planner-embedded' data-planner-root data-api-base='/planner-api.php' data-lang='{{ plannerLang }}'>
   <section class='planner-todos' data-todos-root data-todo-mode='editor' data-api-base='/planner-api.php'>
@@ -47,10 +47,10 @@
       </div>
     </div>
     <div class='calendar-title' id='calendar-title'></div>
-    <div class='segmented' aria-label='视图模式' data-i18n-attr='aria-label:view.label'>
-      <button type='button' data-view='month' data-i18n='view.month'>月</button>
-      <button class='active' type='button' data-view='week' data-i18n='view.week'>周</button>
-      <button type='button' data-view='day' data-i18n='view.day'>今日</button>
+    <div class='segmented' role='group' aria-label='视图模式' data-i18n-attr='aria-label:view.label'>
+      <button type='button' data-view='month' aria-pressed='false' data-i18n='view.month'>月</button>
+      <button class='active' type='button' data-view='week' aria-pressed='true' data-i18n='view.week'>周</button>
+      <button type='button' data-view='day' aria-pressed='false' data-i18n='view.day'>今日</button>
     </div>
     <label class='planner-filter'><span data-i18n='filter.type'>类型</span>
       <select id='type-filter' class='form-control'>
@@ -75,7 +75,7 @@
           <h2 data-i18n='side.selectedDate'>选中日期</h2>
           <p class='muted'><span id='selected-date'></span><span id='selected-count'></span></p>
         </div>
-        <button id='selected-new-plan-button' class='btn btn-secondary btn-sm' type='button'><i class='fas fa-plus fa-fw mr-1'></i><span data-i18n='action.newPlan'>新建计划</span></button>
+        <button id='selected-new-plan-button' class='btn btn-primary' type='button'><i class='fas fa-plus fa-fw mr-1'></i><span data-i18n='action.newPlan'>新建计划</span></button>
       </div>
       <div id='selected-list' class='plan-list'></div>
     </aside>
@@ -86,7 +86,7 @@
   <form id='plan-form' class='planner-modal-card'>
     <div class='planner-modal-header'>
       <h2 id='dialog-title'>新建计划</h2>
-      <button id='dialog-close' class='btn btn-sm btn-secondary' type='button' aria-label='关闭' data-i18n-attr='aria-label:dialog.close'>×</button>
+      <button id='dialog-close' class='btn btn-secondary planner-dialog-close' type='button' aria-label='关闭' data-i18n-attr='aria-label:dialog.close'><i class='fas fa-times fa-fw'></i></button>
     </div>
     <input name='id' type='hidden'>
     <div class='planner-form-grid'>
@@ -110,6 +110,6 @@
   </form>
 </dialog>
 
-<script type='module' src='/planner-assets/app.js?v=20260721-visual2'></script>
-<script defer src='/planner-assets/todos.js?v=20260624-todo1'></script>
+<script type='module' src='/planner-assets/app.js?v=20260722-controls1'></script>
+<script defer src='/planner-assets/todos.js?v=20260722-controls1'></script>
 {% endblock %}

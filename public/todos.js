@@ -110,8 +110,8 @@
           ${todo.note ? `<div class="todo-note">${escapeHtml(todo.note)}</div>` : ''}
         </div>
         <div class="todo-actions">
-          <button type="button" class="btn btn-secondary btn-sm" data-todo-edit>Edit</button>
-          <button type="button" class="btn btn-danger btn-sm" data-todo-delete>Delete</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-todo-edit title="Edit todo" aria-label="Edit todo"><i class="fas fa-pen fa-fw"></i></button>
+          <button type="button" class="btn btn-danger btn-sm" data-todo-delete title="Delete todo" aria-label="Delete todo"><i class="fas fa-trash fa-fw"></i></button>
         </div>
       </article>
     `).join('');

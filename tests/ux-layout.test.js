@@ -34,6 +34,20 @@ test('planner todo composer can collapse on mobile', () => {
   assert.match(styles, /\.todo-composer > summary\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?right:\s*\.85rem/);
 });
 
+test('planner controls share one visual scale and explicit selected states', () => {
+  const template = read('planner.html');
+  const plannerStyles = read('public/styles.css');
+  const todoStyles = read('public/todos.css');
+  const script = read('public/app.js');
+
+  assert.match(template, /class='segmented' role='group'/);
+  assert.match(template, /id='selected-new-plan-button' class='btn btn-primary'/);
+  assert.match(plannerStyles, /--planner-control-height:\s*38px/);
+  assert.match(plannerStyles, /\.segmented button\.active\s*\{[\s\S]*?border-color:\s*var\(--planner-accent\)/);
+  assert.match(todoStyles, /min-height:\s*var\(--planner-control-height, 38px\)/);
+  assert.match(script, /button\.setAttribute\('aria-pressed', String\(active\)\)/);
+});
+
 test('dashboard grid has a scoped class for mobile overflow containment', () => {
   const template = read('dashboard.html');
   const styles = read('public/todos.css');
