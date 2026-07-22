@@ -51,9 +51,8 @@ test('same-day plans remain distinct after save another and reload', async ({ pa
   await loginIfNeeded(page);
   await expect(page.locator('.calendar-grid.timeline')).toBeVisible();
 
-  const slot = page.locator('.time-day-column.selected .time-slot[data-time-hour="9"]').first();
-  const selectedDate = await slot.getAttribute('data-time-date');
-  await slot.click();
+  const selectedDate = await page.locator('#selected-date').textContent();
+  await page.locator('#selected-new-plan-button').click();
   await page.locator('#plan-form input[name="title"]').fill(titles[0]);
   await page.locator('#save-another-button').click();
 
@@ -64,7 +63,9 @@ test('same-day plans remain distinct after save another and reload', async ({ pa
 
   await expect(page.locator('#selected-list')).toContainText(titles[0]);
   await expect(page.locator('#selected-list')).toContainText(titles[1]);
-  await expect(page.locator(`.time-day-column[data-date="${selectedDate}"] .timed-event`)).toHaveCount(2);
+  const selectedColumn = page.locator(`.time-day-column[data-date="${selectedDate}"]`);
+  await expect(selectedColumn.locator('.timed-event', { hasText: titles[0] })).toHaveCount(1);
+  await expect(selectedColumn.locator('.timed-event', { hasText: titles[1] })).toHaveCount(1);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('#selected-list')).toContainText(titles[0]);
