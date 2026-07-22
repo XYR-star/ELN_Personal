@@ -17,6 +17,7 @@ test('resource workspace preserves native resource controls while adding locatio
   assert.match(script, /data-action="checkbox-entity"/);
   assert.match(script, /data-action="toggle-pin"/);
   assert.match(script, /className = 'entity resource-workspace-row'/);
+  assert.match(script, /resource\.checkbox\.addEventListener\('change'/);
   assert.match(script, /resource-locations\?item_ids=/);
   assert.match(script, /MutationObserver/);
   assert.match(script, /locations\/\$\{assignment\.location_id\}\/view/);

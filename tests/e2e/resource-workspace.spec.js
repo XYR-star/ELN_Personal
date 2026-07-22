@@ -39,7 +39,8 @@ test('resource table and storage preview preserve native controls', async ({ pag
   const location = firstRow.locator('.resource-location-state');
   await expect(location).not.toHaveClass(/is-loading/);
 
-  await firstRow.dispatchEvent('click');
+  const checkbox = firstRow.locator('[data-action="checkbox-entity"]');
+  await checkbox.click();
   await expect(page.locator('.resource-location-summary h2')).toHaveText(title);
   if (await location.evaluate((node) => node.classList.contains('is-assigned'))) {
     await expect(page.locator('.resource-mini-slot.is-selected')).toHaveCount(1);
@@ -47,8 +48,6 @@ test('resource table and storage preview preserve native controls', async ({ pag
     await expect(page.locator('.resource-location-empty.is-unassigned')).toBeVisible();
   }
 
-  const checkbox = firstRow.locator('[data-action="checkbox-entity"]');
-  await checkbox.click();
   await expect(page.locator('#withSelected')).toBeVisible();
   await checkbox.click();
   await expect(page.locator('#withSelected')).toBeHidden();

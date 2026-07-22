@@ -156,6 +156,9 @@ if (info) {
 
     row.append(selectCell, titleCell, categoryCell, statusCell, updatedCell, locationCell, actionsCell);
     const select = () => selectResource(resource.id, true);
+    resource.checkbox.addEventListener('change', () => {
+      if (resource.checkbox.checked) select();
+    });
     titleLink.addEventListener('click', (event) => {
       if (!window.matchMedia('(max-width: 767.98px)').matches) return;
       event.preventDefault();
