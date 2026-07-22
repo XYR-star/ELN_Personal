@@ -91,6 +91,15 @@ test('Planner renders calendar, selected list, and no browser errors', async ({ 
     .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().width)));
   expect([...new Set(viewButtonWidths)]).toEqual([64]);
 
+  const viewButtonCenterOffsets = await page.locator('.segmented button').evaluateAll((nodes) => nodes.map((node) => {
+    const button = node.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const text = range.getBoundingClientRect();
+    return Math.abs((text.left - button.left) - (button.right - text.right));
+  }));
+  expect(Math.max(...viewButtonCenterOffsets)).toBeLessThanOrEqual(1);
+
   expect(errors).toEqual([]);
 });
 

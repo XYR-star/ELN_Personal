@@ -101,10 +101,12 @@
 
 .segmented button {
   position: relative;
+  display: grid;
   width: 64px;
   min-height: var(--planner-control-height);
   margin-left: -1px;
-  padding: .375rem .75rem;
+  padding: 0;
+  place-items: center;
   color: #495057;
   white-space: nowrap;
   background: #fff;
@@ -651,7 +653,7 @@
   .planner-date-navigation { grid-column: 1; }
   .calendar-title { grid-column: 1 / -1; grid-row: 2; }
   .segmented { grid-column: 2; grid-row: 1; }
-  .segmented button { width: 58px; padding-right: .55rem; padding-left: .55rem; }
+  .segmented button { width: 58px; }
   .planner-filter { display: none !important; }
   .planner-search { grid-column: 1 / -1; }
   .planner-calendar-panel { padding: .4rem; overflow-x: auto; }
