@@ -13,7 +13,7 @@ if (info) {
     edit: '编辑', pin: '置顶', selectedSlot: '当前孔位', otherSlot: '已占用', childSlot: '下级位置',
     filters: '筛选', moreFilters: '高级筛选', selected: '已选', bulkActions: '批量操作', closeBulk: '关闭批量操作',
     deleteSelected: '删除选中资源', freezer: '冰箱', drawer: '抽屉', box: '盒子', localRows: '局部孔位',
-    freezerOverview: '冰箱总览', noFreezers: '尚未配置冰箱位置'
+    freezerOverview: '冰箱总览', noFreezers: '尚未配置冰箱位置', drawerFront: '前端', drawerBack: '深处', drawerDirection: '前端到深处'
   } : {
     resource: 'Resource', category: 'Category', status: 'Status', updated: 'Updated', location: 'Location', actions: 'Actions',
     unassigned: 'Unassigned', loading: 'Loading', storageLocation: 'Storage location',
@@ -22,7 +22,7 @@ if (info) {
     edit: 'Edit', pin: 'Pin', selectedSlot: 'Selected slot', otherSlot: 'Occupied', childSlot: 'Child location',
     filters: 'Filters', moreFilters: 'More filters', selected: 'selected', bulkActions: 'Batch actions', closeBulk: 'Close batch actions',
     deleteSelected: 'Delete selected resources', freezer: 'Freezer', drawer: 'Drawer', box: 'Box', localRows: 'Local slots',
-    freezerOverview: 'Freezer overview', noFreezers: 'No freezer locations configured'
+    freezerOverview: 'Freezer overview', noFreezers: 'No freezer locations configured', drawerFront: 'Front', drawerBack: 'Back', drawerDirection: 'Front to back'
   };
 
   const state = {
@@ -412,12 +412,13 @@ if (info) {
         cells.push(`<span class="resource-drawer-slot${selected ? ' is-selected' : ''}" title="${escapeHtml(slot.code)}">${selected ? escapeHtml(slot.code) : ''}</span>`);
       });
     }
-    const drawerHandles = Array.from({ length: rows }, () => '<span></span>').join('');
     return `
       <div class="resource-drawer-stage">
-        <div class="resource-drawer-rack" style="--resource-drawer-rows:${rows}">
+        <div class="resource-drawer-rack">
+          <div class="resource-drawer-depth-axis" aria-label="${escapeHtml(copy.drawerDirection)}">
+            <span>${escapeHtml(copy.drawerFront)}</span><i aria-hidden="true"></i><span>${escapeHtml(copy.drawerBack)}</span>
+          </div>
           <div class="resource-drawer-grid" style="--resource-drawer-columns:${columns}">${cells.join('')}</div>
-          <div class="resource-drawer-front" aria-hidden="true">${drawerHandles}</div>
         </div>
       </div>`;
   }

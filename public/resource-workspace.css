@@ -541,128 +541,83 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
   border-color: var(--resource-accent-dark);
 }
 
-.resource-context-locator.is-drawer { overflow: hidden; }
+.resource-context-locator.is-drawer { overflow: visible; }
 
 .resource-drawer-stage {
-  position: relative;
-  min-height: 126px;
-  padding: .3rem .25rem .55rem .4rem;
-  overflow: hidden;
-  perspective: 520px;
+  min-height: 116px;
+  padding: .1rem 0 .35rem;
 }
 
 .resource-drawer-rack {
-  position: relative;
-  width: min(calc(100% - .5rem), 164px);
+  width: max-content;
+  max-width: 100%;
   margin: 0 auto;
-  padding: .35rem .4rem .45rem 1rem;
-  background: #f2f4f5;
-  border: 1px solid #c3cbd0;
-  border-left: 3px solid #9ca7ad;
-  border-radius: 2px;
-  box-shadow: inset 0 0 0 2px #e1e5e7, 3px 4px 6px rgb(50 62 70 / 10%);
-  transform: rotateY(-9deg);
-  transform-origin: 0 50%;
-  transform-style: preserve-3d;
 }
 
-.resource-drawer-rack::before {
-  position: absolute;
-  top: -4px;
-  right: -1px;
-  left: 3px;
-  height: 4px;
-  content: '';
-  background: #dce1e4;
-  border: 1px solid #bcc5ca;
-  transform: skewX(-36deg);
-  transform-origin: bottom;
+.resource-drawer-depth-axis {
+  display: flex;
+  width: calc(100% - 18px);
+  min-height: 13px;
+  margin: 0 0 .2rem 18px;
+  gap: 4px;
+  align-items: center;
+  color: #858d93;
+  font-size: .46rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.resource-drawer-rack::after {
+.resource-drawer-depth-axis i {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  background: #b8c0c5;
+}
+
+.resource-drawer-depth-axis i::after {
   position: absolute;
   top: -2px;
-  right: -4px;
-  width: 4px;
-  height: calc(100% + 3px);
+  right: 0;
+  width: 5px;
+  height: 5px;
   content: '';
-  background: #c9d0d4;
-  border: 1px solid #aeb8bd;
-  transform: skewY(-36deg);
-  transform-origin: left;
+  border-top: 1px solid #8f999f;
+  border-right: 1px solid #8f999f;
+  transform: rotate(45deg);
 }
 
 .resource-drawer-grid {
   display: grid;
-  position: relative;
-  z-index: 2;
-  grid-template-columns: 14px repeat(var(--resource-drawer-columns), minmax(16px, 1fr));
+  grid-template-columns: 16px repeat(var(--resource-drawer-columns), 18px);
   gap: 2px;
-  transform: translateZ(2px);
 }
 
 .resource-drawer-axis {
   display: grid;
-  min-width: 0;
-  min-height: 14px;
+  width: 16px;
+  height: 16px;
   place-items: center;
-  color: #68747b;
-  font-size: .52rem;
-  font-weight: 700;
+  color: #858d93;
+  font-size: .54rem;
 }
 
 .resource-drawer-slot {
   display: grid;
-  min-width: 0;
+  width: 18px;
   height: 18px;
   place-items: center;
   color: #fff;
   font-size: .48rem;
-  background: #f9fafb;
-  border: 1px solid #c7ced3;
-  border-right: 2px solid #aeb8bd;
+  background: #fff;
+  border: 1px solid #c8ced3;
   border-radius: 2px;
-  box-shadow: 1px 1px 1px rgb(45 58 66 / 7%);
 }
 
 .resource-drawer-slot.is-selected {
   color: #fff;
   font-weight: 700;
   background: var(--resource-accent-dark);
-  border-color: #0f6269;
-  box-shadow: 0 0 0 1px #fff, 0 0 0 2px var(--resource-accent);
-  transform: translateX(-1px) translateZ(5px);
-}
-
-.resource-drawer-front {
-  position: absolute;
-  z-index: 3;
-  top: 21px;
-  bottom: .45rem;
-  left: 3px;
-  display: grid;
-  width: 8px;
-  grid-template-rows: repeat(var(--resource-drawer-rows), 1fr);
-  gap: 2px;
-  transform: translateZ(3px);
-}
-
-.resource-drawer-front span {
-  position: relative;
-  background: #d3d9dc;
-  border: 1px solid #a8b2b8;
-  border-radius: 1px;
-}
-
-.resource-drawer-front span::after {
-  position: absolute;
-  top: 44%;
-  right: 2px;
-  left: 2px;
-  height: 1px;
-  content: '';
-  background: #7b878d;
-  border-radius: 1px;
+  border-color: var(--resource-accent-dark);
 }
 
 .resource-location-facts {
@@ -803,8 +758,7 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
   .resource-location-panel-body { position: static; padding: 1rem; }
   .resource-location-empty { min-height: 240px; }
   .resource-location-context { gap: .65rem; }
-  .resource-drawer-stage { min-height: 126px; padding-right: .1rem; padding-left: .25rem; }
-  .resource-drawer-rack { width: min(calc(100% - .25rem), 156px); }
+  .resource-drawer-stage { min-height: 116px; }
   .resource-mini-grid { max-width: 420px; gap: 2px; }
   .resource-mini-slot { font-size: .54rem; }
 
