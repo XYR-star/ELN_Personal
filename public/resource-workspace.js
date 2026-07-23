@@ -412,12 +412,13 @@ if (info) {
         cells.push(`<span class="resource-drawer-slot${selected ? ' is-selected' : ''}" title="${escapeHtml(slot.code)}">${selected ? escapeHtml(slot.code) : ''}</span>`);
       });
     }
+    const drawerHandles = Array.from({ length: rows }, () => '<span></span>').join('');
     return `
       <div class="resource-drawer-stage">
-        <div class="resource-drawer-tray">
+        <div class="resource-drawer-rack" style="--resource-drawer-rows:${rows}">
           <div class="resource-drawer-grid" style="--resource-drawer-columns:${columns}">${cells.join('')}</div>
+          <div class="resource-drawer-front" aria-hidden="true">${drawerHandles}</div>
         </div>
-        <div class="resource-drawer-front" aria-hidden="true"><span></span></div>
       </div>`;
   }
 

@@ -44,7 +44,7 @@ test('resource workspace has desktop split view and mobile location sheet', () =
   assert.match(styles, /\.resource-context-grid/);
   assert.match(styles, /\.resource-freezer-overview/);
   assert.match(styles, /\.resource-drawer-stage/);
-  assert.match(styles, /perspective:\s*420px/);
+  assert.match(styles, /perspective:\s*520px/);
   assert.match(styles, /resource-workspace-pending/);
   assert.match(styles, /position:\s*fixed/);
 });
