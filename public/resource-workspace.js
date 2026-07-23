@@ -7,20 +7,22 @@ if (info) {
   const isChinese = document.documentElement.lang.toLowerCase().startsWith('zh');
   const copy = isChinese ? {
     resource: '资源', category: '分类', status: '状态', updated: '更新', location: '存放位置', actions: '操作',
-    unassigned: '未分配', loading: '读取中', storageLocation: '存放位置', noSelection: '尚未选择资源',
+    unassigned: '未分配', loading: '读取中', storageLocation: '存放位置',
     noAssignment: '该资源尚未分配存放位置', assigned: '处存放位置', quantity: '数量', openResource: '打开资源',
     manageStorage: '管理存放', close: '关闭位置详情', emptyGrid: '该位置没有网格', loadFailed: '位置读取失败',
     edit: '编辑', pin: '置顶', selectedSlot: '当前孔位', otherSlot: '已占用', childSlot: '下级位置',
     filters: '筛选', moreFilters: '高级筛选', selected: '已选', bulkActions: '批量操作', closeBulk: '关闭批量操作',
-    deleteSelected: '删除选中资源', freezer: '冰箱', drawer: '抽屉', box: '盒子', localRows: '局部孔位'
+    deleteSelected: '删除选中资源', freezer: '冰箱', drawer: '抽屉', box: '盒子', localRows: '局部孔位',
+    freezerOverview: '冰箱总览', noFreezers: '尚未配置冰箱位置'
   } : {
     resource: 'Resource', category: 'Category', status: 'Status', updated: 'Updated', location: 'Location', actions: 'Actions',
-    unassigned: 'Unassigned', loading: 'Loading', storageLocation: 'Storage location', noSelection: 'No resource selected',
+    unassigned: 'Unassigned', loading: 'Loading', storageLocation: 'Storage location',
     noAssignment: 'No storage location assigned', assigned: 'assigned locations', quantity: 'Quantity', openResource: 'Open resource',
     manageStorage: 'Manage storage', close: 'Close location details', emptyGrid: 'This location has no grid', loadFailed: 'Could not load location',
     edit: 'Edit', pin: 'Pin', selectedSlot: 'Selected slot', otherSlot: 'Occupied', childSlot: 'Child location',
     filters: 'Filters', moreFilters: 'More filters', selected: 'selected', bulkActions: 'Batch actions', closeBulk: 'Close batch actions',
-    deleteSelected: 'Delete selected resources', freezer: 'Freezer', drawer: 'Drawer', box: 'Box', localRows: 'Local slots'
+    deleteSelected: 'Delete selected resources', freezer: 'Freezer', drawer: 'Drawer', box: 'Box', localRows: 'Local slots',
+    freezerOverview: 'Freezer overview', noFreezers: 'No freezer locations configured'
   };
 
   const state = {
@@ -194,10 +196,7 @@ if (info) {
         <button class="btn btn-sm btn-secondary resource-location-close" type="button" title="${escapeHtml(copy.close)}" aria-label="${escapeHtml(copy.close)}"><i class="fas fa-xmark fa-fw" aria-hidden="true"></i></button>
       </div>
       <div class="resource-location-panel-body">
-        <div class="resource-location-empty">
-          <i class="fas fa-map-location-dot" aria-hidden="true"></i>
-          <strong>${escapeHtml(copy.noSelection)}</strong>
-        </div>
+        <div class="resource-location-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i>${escapeHtml(copy.loading)}</div>
       </div>`;
     panel.querySelector('.resource-location-close').addEventListener('click', closeMobilePanel);
     return panel;
@@ -281,6 +280,7 @@ if (info) {
     workspace.append(tablePanel, state.panel);
     createSelectionTools(workspace);
     host.before(workspace);
+    integrateNativeToolbar(table);
     updateSelectionTools();
 
     state.backdrop = document.createElement('button');
@@ -395,6 +395,32 @@ if (info) {
     return `<div class="resource-context-grid" style="--resource-context-columns:${columns}">${cells.join('')}</div>`;
   }
 
+  function renderDrawerDepth(location, highlightCode) {
+    const rows = Number(location?.row_count || 0);
+    const columns = Number(location?.column_count || 0);
+    if (!rows || !columns) return '';
+    const slots = generateSlotGrid(rows, columns);
+    const cells = ['<span class="resource-drawer-axis resource-drawer-corner"></span>'];
+    for (let column = 1; column <= columns; column += 1) {
+      cells.push(`<span class="resource-drawer-axis">${column}</span>`);
+    }
+    for (let row = 1; row <= rows; row += 1) {
+      const rowSlots = slots.filter((slot) => slot.row === row);
+      cells.push(`<span class="resource-drawer-axis is-row">${escapeHtml(rowSlots[0]?.rowLabel || '')}</span>`);
+      rowSlots.forEach((slot) => {
+        const selected = slot.code === String(highlightCode || '').toUpperCase();
+        cells.push(`<span class="resource-drawer-slot${selected ? ' is-selected' : ''}" title="${escapeHtml(slot.code)}">${selected ? escapeHtml(slot.code) : ''}</span>`);
+      });
+    }
+    return `
+      <div class="resource-drawer-stage">
+        <div class="resource-drawer-tray">
+          <div class="resource-drawer-grid" style="--resource-drawer-columns:${columns}">${cells.join('')}</div>
+        </div>
+        <div class="resource-drawer-front" aria-hidden="true"><span></span></div>
+      </div>`;
+  }
+
   function renderLocationContext(assignment) {
     const trail = locationTrail(assignment.location_id);
     const steps = [];
@@ -402,11 +428,12 @@ if (info) {
       const location = trail[index];
       const child = trail[index + 1];
       if (!location.row_count || !location.column_count || !child.position_code) continue;
+      const isDrawer = location.kind === 'drawer';
       const icon = location.kind === 'freezer' ? 'fa-temperature-low' : 'fa-layer-group';
       steps.push(`
-        <section class="resource-context-locator">
+        <section class="resource-context-locator${isDrawer ? ' is-drawer' : ''}">
           <header><span><i class="fas ${icon} fa-fw" aria-hidden="true"></i>${escapeHtml(location.name)}</span><small>${escapeHtml(locationKindLabel(location))} · ${escapeHtml(child.position_code)}</small></header>
-          ${renderLocatorGrid(location, child.position_code)}
+          ${isDrawer ? renderDrawerDepth(location, child.position_code) : renderLocatorGrid(location, child.position_code)}
         </section>`);
     }
     return steps.length ? `<div class="resource-location-context">${steps.join('')}</div>` : '';
@@ -490,6 +517,68 @@ if (info) {
     }
   }
 
+  function freezerCountLabel(count) {
+    return isChinese ? `${count} 个${copy.freezer}` : `${count} configured ${count === 1 ? 'freezer' : 'freezers'}`;
+  }
+
+  function drawerCountLabel(count) {
+    return isChinese ? `${count} 个${copy.drawer}` : `${count} configured ${count === 1 ? 'drawer' : 'drawers'}`;
+  }
+
+  function renderFreezerOverviewGrid(freezer) {
+    const rows = Number(freezer?.row_count || 0);
+    const columns = Number(freezer?.column_count || 0);
+    if (!rows || !columns) return `<div class="resource-mini-grid-empty">${escapeHtml(copy.emptyGrid)}</div>`;
+    const children = state.locations.filter((location) => Number(location.parent_id) === Number(freezer.id));
+    const childrenByCode = new Map(children.map((location) => [String(location.position_code || '').toUpperCase(), location]));
+    const slots = generateSlotGrid(rows, columns);
+    const cells = ['<span class="resource-freezer-axis resource-freezer-corner"></span>'];
+    for (let column = 1; column <= columns; column += 1) {
+      cells.push(`<span class="resource-freezer-axis">${column}</span>`);
+    }
+    for (let row = 1; row <= rows; row += 1) {
+      const rowSlots = slots.filter((slot) => slot.row === row);
+      cells.push(`<span class="resource-freezer-axis is-row">${escapeHtml(rowSlots[0]?.rowLabel || '')}</span>`);
+      rowSlots.forEach((slot) => {
+        const child = childrenByCode.get(slot.code);
+        const title = child ? `${slot.code} · ${child.name}` : slot.code;
+        cells.push(`<span class="resource-freezer-slot${child ? ' is-configured' : ''}" title="${escapeHtml(title)}"><span>${escapeHtml(slot.code)}</span></span>`);
+      });
+    }
+    return `<div class="resource-freezer-grid" style="--resource-freezer-columns:${columns}">${cells.join('')}</div>`;
+  }
+
+  function renderFreezerOverview() {
+    if (!state.panel) return;
+    const freezers = state.locations.filter((location) => location.kind === 'freezer' && !location.parent_id);
+    const panelBody = state.panel.querySelector('.resource-location-panel-body');
+    if (!freezers.length) {
+      panelBody.innerHTML = `
+        <div class="resource-location-summary">
+          <span class="resource-location-eyebrow">${escapeHtml(copy.storageLocation)}</span>
+          <h2>${escapeHtml(copy.freezerOverview)}</h2>
+        </div>
+        <div class="resource-location-empty"><i class="fas fa-temperature-low" aria-hidden="true"></i><strong>${escapeHtml(copy.noFreezers)}</strong></div>`;
+      return;
+    }
+    panelBody.innerHTML = `
+      <div class="resource-location-summary">
+        <span class="resource-location-eyebrow">${escapeHtml(copy.storageLocation)}</span>
+        <h2>${escapeHtml(copy.freezerOverview)}</h2>
+        <span class="resource-assignment-count">${escapeHtml(freezerCountLabel(freezers.length))}</span>
+      </div>
+      <div class="resource-freezer-overview">
+        ${freezers.map((freezer) => {
+          const drawers = state.locations.filter((location) => Number(location.parent_id) === Number(freezer.id));
+          return `
+            <section class="resource-freezer-overview-item">
+              <header><span><i class="fas fa-temperature-low fa-fw" aria-hidden="true"></i>${escapeHtml(freezer.name)}</span><small>${escapeHtml(drawerCountLabel(drawers.length))}</small></header>
+              ${renderFreezerOverviewGrid(freezer)}
+            </section>`;
+        }).join('')}
+      </div>`;
+  }
+
   function openMobilePanel() {
     if (!window.matchMedia('(max-width: 767.98px)').matches) return;
     state.panel.classList.add('is-open');
@@ -535,6 +624,7 @@ if (info) {
       state.assignmentsByItem = groupAssignments(assignments);
       updateLocationCells();
       if (state.selectedItemId && state.resourcesById.has(state.selectedItemId)) selectResource(state.selectedItemId);
+      else renderFreezerOverview();
     } catch (error) {
       if (token !== state.refreshToken) return;
       document.querySelectorAll('.resource-location-state.is-loading').forEach((node) => {
@@ -542,6 +632,10 @@ if (info) {
         node.classList.add('is-error');
         node.textContent = copy.loadFailed;
       });
+      const panelBody = state.panel?.querySelector('.resource-location-panel-body');
+      if (panelBody && !state.selectedItemId) {
+        panelBody.innerHTML = `<div class="resource-location-empty"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>${escapeHtml(copy.loadFailed)}</strong></div>`;
+      }
       console.error(error);
     }
   }
@@ -651,7 +745,34 @@ if (info) {
     hideControl(layoutToggle);
     hideControl(layoutToggle?.nextElementSibling);
     hideControl(resultsButton?.closest('.btn-group'));
-    sortButton.closest('.btn-group')?.parentElement?.parentElement?.classList.add('ml-auto');
+  }
+
+  function integrateNativeToolbar(table) {
+    const selectAll = document.querySelector('[data-action="toggle-select-all-entities"]');
+    const sortButton = document.querySelector('button[aria-label="Sort"]');
+    if (!selectAll || !sortButton || !table) return;
+    const nativeToolbar = selectAll.parentElement?.parentElement;
+    const sortGroup = sortButton.closest('.btn-group');
+    const selectHeader = table.querySelector('thead .resource-col-select');
+    const actionsHeader = table.querySelector('thead .resource-col-actions');
+    if (!selectHeader || !actionsHeader || !sortGroup) return;
+
+    selectAll.classList.remove('p-2', 'lh-normal');
+    selectAll.classList.add('resource-table-select-all');
+    sortButton.classList.add('resource-table-sort-button');
+    sortGroup.classList.add('resource-table-sort');
+    selectHeader.append(selectAll);
+    actionsHeader.append(sortGroup);
+
+    if (nativeToolbar) {
+      nativeToolbar.hidden = true;
+      nativeToolbar.classList.add('resource-native-toolbar');
+      const separator = nativeToolbar.nextElementSibling;
+      if (separator?.tagName === 'HR') {
+        separator.hidden = true;
+        separator.classList.add('resource-native-toolbar-rule');
+      }
+    }
   }
 
   let refreshQueued = false;
@@ -672,3 +793,5 @@ if (info) {
   observer.observe(document.getElementById('showModeContent'), { childList: true, subtree: true });
   initializeWorkspace();
 }
+
+requestAnimationFrame(() => document.documentElement.classList.remove('resource-workspace-pending'));

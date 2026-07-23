@@ -26,12 +26,28 @@ loadLocalEnv();
 const authFile = process.env.ELAB_STORAGE_STATE || 'playwright/.auth/elabftw.json';
 if (existsSync(authFile)) test.use({ storageState: authFile });
 
+test('workspace bootstrap hides the native list while the module starts', async ({ page }) => {
+  await page.route('**/planner-assets/resource-workspace-bootstrap.js*', async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace('}, 4000);', '}, 30000);');
+    await route.fulfill({ response, body });
+  });
+  await page.route((url) => url.pathname.endsWith('/planner-assets/resource-workspace.js'), (route) => route.abort());
+  await page.goto('/database.php?scope=1', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('html')).toHaveClass(/resource-workspace-pending/);
+  await expect(page.locator('#itemList')).toBeAttached();
+  await expect(page.locator('#showModeContent')).toHaveCSS('visibility', 'hidden');
+});
+
 test('resource table and storage preview preserve native controls', async ({ page }) => {
   await page.goto('/database.php?scope=1', { waitUntil: 'domcontentloaded' });
   await loginIfNeeded(page);
 
   const workspace = page.locator('.resource-workspace');
   await expect(workspace).toBeVisible();
+  await expect(page.locator('html')).not.toHaveClass(/resource-workspace-pending/);
+  await expect(page.locator('.resource-freezer-overview')).toBeVisible();
+  expect(await page.locator('.resource-freezer-overview-item').count()).toBeGreaterThan(0);
   await expect(page.locator('.resource-filter-section')).toBeHidden();
   await page.locator('.resource-filter-toggle').click();
   await expect(page.locator('.resource-filter-section')).toBeVisible();
@@ -55,6 +71,8 @@ test('resource table and storage preview preserve native controls', async ({ pag
     await expect(page.locator('.resource-mini-slot.is-selected')).toHaveCount(1);
     expect(await page.locator('.resource-mini-grid .resource-grid-axis.is-row').count()).toBeLessThanOrEqual(4);
     await expect(page.locator('.resource-context-locator').first()).toBeVisible();
+    await expect(page.locator('.resource-drawer-stage')).toBeVisible();
+    await expect(page.locator('.resource-drawer-slot.is-selected')).toHaveCount(1);
   } else {
     await expect(page.locator('.resource-location-empty.is-unassigned')).toBeVisible();
   }
@@ -72,10 +90,13 @@ test('resource table and storage preview preserve native controls', async ({ pag
   await expect(page.locator('.resource-selection-control')).toBeHidden();
 
   await expect(page.locator('[data-action="toggle-select-all-entities"]')).toBeVisible();
+  await expect(page.locator('thead .resource-col-select [data-action="toggle-select-all-entities"]')).toHaveCount(1);
   await expect(page.locator('[data-action="invert-entities-selection"]')).toBeHidden();
   await expect(page.locator('[data-action="expand-all-entities"]')).toBeHidden();
   await expect(page.locator('#scopeBtn')).toBeHidden();
   await expect(page.locator('button[aria-label="Sort"]')).toBeVisible();
+  await expect(page.locator('thead .resource-col-actions button[aria-label="Sort"]')).toHaveCount(1);
+  await expect(page.locator('.resource-native-toolbar')).toBeHidden();
   await expect(page.locator('button[aria-label="Results per page"]')).toBeHidden();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

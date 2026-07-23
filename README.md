@@ -174,7 +174,7 @@ npm run build:diagram
 
 ## Deployment Notes
 
-The live eLabFTW instance uses Docker and template overrides under the eLabFTW data directory. A typical deployment copies the maintained overrides and add-on pages into the mounted override/web locations, then clears template cache or restarts the web container.
+The live eLabFTW instance uses Docker and template overrides under the eLabFTW data directory. A typical deployment copies the maintained overrides and add-on pages into the mounted override/web locations, then clears the template cache and restarts the web container. The compiled Twig cache persists across a container restart, so restarting alone can continue serving an older override.
 
 Current important override:
 
@@ -197,7 +197,7 @@ Current important override:
 After changing template overrides, refresh runtime cache:
 
 ```bash
-docker exec elabftw sh -lc 'rm -rf /elabftw/cache/twig/* /elabftw/cache/templates/* 2>/dev/null || true'
+docker exec elabftw sh -lc 'find /elabftw/cache/twig /elabftw/cache/templates -type f -delete 2>/dev/null || true'
 docker compose -f /root/elabftw/docker-compose.yml restart web
 ```
 

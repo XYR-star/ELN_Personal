@@ -9,6 +9,7 @@ test('resource workspace is isolated to resource show pages', () => {
   assert.match(head, /scriptName == 'database\.php'/);
   assert.match(head, /resource-workspace\.css/);
   assert.match(head, /resource-workspace\.js/);
+  assert.match(head, /resource-workspace-bootstrap\.js/);
   assert.match(head, /mode'\) not in \['view', 'edit'\]/);
 });
 
@@ -21,7 +22,11 @@ test('resource workspace preserves native resource controls while adding locatio
   assert.match(script, /createSelectionTools/);
   assert.match(script, /setupResourceFilters/);
   assert.match(script, /simplifyNativeToolbar/);
+  assert.match(script, /integrateNativeToolbar/);
   assert.match(script, /renderLocationContext/);
+  assert.match(script, /renderDrawerDepth/);
+  assert.match(script, /renderFreezerOverview/);
+  assert.match(script, /location\.kind === 'freezer' && !location\.parent_id/);
   assert.match(script, /visibleRange\(selectedSlot\.row, view\.rows, 4\)/);
   assert.match(script, /showModal\(\)/);
   assert.match(script, /resource-locations\?item_ids=/);
@@ -37,5 +42,9 @@ test('resource workspace has desktop split view and mobile location sheet', () =
   assert.match(styles, /\.resource-bulk-dialog/);
   assert.match(styles, /\.resource-filter-toggle/);
   assert.match(styles, /\.resource-context-grid/);
+  assert.match(styles, /\.resource-freezer-overview/);
+  assert.match(styles, /\.resource-drawer-stage/);
+  assert.match(styles, /perspective:\s*420px/);
+  assert.match(styles, /resource-workspace-pending/);
   assert.match(styles, /position:\s*fixed/);
 });
