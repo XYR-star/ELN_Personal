@@ -467,9 +467,10 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
 
 .resource-location-context {
   display: grid;
-  margin: .25rem 0 1rem;
+  margin: .25rem 0 .75rem;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: .75rem;
+  align-items: start;
 }
 
 .resource-context-locator,
@@ -477,6 +478,11 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
   min-width: 0;
   padding-top: .65rem;
   border-top: 1px solid var(--resource-border);
+}
+
+.resource-context-locator {
+  display: flex;
+  flex-direction: column;
 }
 
 .resource-context-locator header,
@@ -509,7 +515,7 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
   width: max-content;
   max-width: 100%;
   margin: 0 auto;
-  grid-template-columns: 16px repeat(var(--resource-context-columns), 18px);
+  grid-template-columns: 16px repeat(var(--resource-context-columns), 24px);
   gap: 2px;
 }
 
@@ -524,8 +530,8 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
 
 .resource-context-slot {
   display: grid;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   place-items: center;
   color: #fff;
   font-size: .48rem;
@@ -544,19 +550,19 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
 .resource-context-locator.is-drawer { overflow: visible; }
 
 .resource-drawer-stage {
-  min-height: 116px;
-  padding: .1rem 0 .35rem;
+  min-height: 0;
+  padding: 0 0 .2rem;
 }
 
 .resource-drawer-rack {
-  width: max-content;
+  width: calc(var(--resource-drawer-stack-width) + 18px);
   max-width: 100%;
   margin: 0 auto;
 }
 
 .resource-drawer-depth-axis {
   display: flex;
-  width: calc(100% - 18px);
+  width: var(--resource-drawer-stack-width);
   min-height: 13px;
   margin: 0 0 .2rem 18px;
   gap: 4px;
@@ -587,30 +593,47 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
 }
 
 .resource-drawer-grid {
-  display: grid;
-  grid-template-columns: 16px repeat(var(--resource-drawer-columns), 18px);
-  gap: 2px;
+  position: relative;
+  width: var(--resource-drawer-stack-width);
+  height: var(--resource-drawer-stack-height);
+  margin-left: 18px;
 }
 
-.resource-drawer-axis {
-  display: grid;
-  width: 16px;
-  height: 16px;
-  place-items: center;
+.resource-drawer-depth-labels {
+  position: relative;
+  width: var(--resource-drawer-stack-width);
+  height: 14px;
+  margin-left: 18px;
   color: #858d93;
   font-size: .54rem;
 }
 
+.resource-drawer-depth-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.resource-drawer-row-label {
+  position: absolute;
+  right: calc(100% + 6px);
+  color: #858d93;
+  font-size: .54rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
 .resource-drawer-slot {
   display: grid;
-  width: 18px;
-  height: 18px;
+  position: absolute;
+  width: 42px;
+  height: 22px;
   place-items: center;
   color: #fff;
   font-size: .48rem;
-  background: #fff;
-  border: 1px solid #c8ced3;
+  background: rgb(255 255 255 / 96%);
+  border: 1px solid #bdc6cc;
   border-radius: 2px;
+  box-shadow: 0 1px 0 rgb(73 88 97 / 8%);
 }
 
 .resource-drawer-slot.is-selected {
@@ -618,6 +641,7 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
   font-weight: 700;
   background: var(--resource-accent-dark);
   border-color: var(--resource-accent-dark);
+  box-shadow: 0 0 0 1px #fff, 0 0 0 2px var(--resource-accent);
 }
 
 .resource-location-facts {
@@ -635,14 +659,14 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
 
 .resource-mini-grid {
   display: grid;
-  width: 100%;
-  max-width: 470px;
-  margin: .5rem auto 1.25rem;
-  grid-template-columns: 24px repeat(var(--resource-grid-columns), minmax(18px, 1fr));
+  width: max-content;
+  max-width: 100%;
+  margin: .45rem auto .8rem;
+  grid-template-columns: 20px repeat(var(--resource-grid-columns), 28px);
   gap: 3px;
 }
 
-.resource-box-locator { margin-bottom: 1rem; }
+.resource-box-locator { margin-bottom: .4rem; }
 
 .resource-grid-axis {
   display: grid;
@@ -654,8 +678,8 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
 
 .resource-mini-slot {
   display: grid;
-  min-width: 0;
-  aspect-ratio: 1;
+  width: 28px;
+  height: 28px;
   place-items: center;
   color: #9ba2a7;
   font-size: .58rem;
@@ -757,9 +781,8 @@ html.resource-workspace-pending #realContainer > .d-flex:has([data-action="toggl
   .resource-location-close { display: inline-flex; align-items: center; justify-content: center; }
   .resource-location-panel-body { position: static; padding: 1rem; }
   .resource-location-empty { min-height: 240px; }
-  .resource-location-context { gap: .65rem; }
-  .resource-drawer-stage { min-height: 116px; }
-  .resource-mini-grid { max-width: 420px; gap: 2px; }
+  .resource-location-context { gap: .5rem; }
+  .resource-mini-grid { gap: 2px; }
   .resource-mini-slot { font-size: .54rem; }
 
   .resource-location-backdrop {

@@ -26,6 +26,7 @@ test('resource workspace preserves native resource controls while adding locatio
   assert.match(script, /renderLocationContext/);
   assert.match(script, /renderDrawerDepth/);
   assert.match(script, /renderFreezerOverview/);
+  assert.match(script, /clearResourcePreview/);
   assert.match(script, /location\.kind === 'freezer' && !location\.parent_id/);
   assert.match(script, /visibleRange\(selectedSlot\.row, view\.rows, 4\)/);
   assert.match(script, /showModal\(\)/);
@@ -45,6 +46,7 @@ test('resource workspace has desktop split view and mobile location sheet', () =
   assert.match(styles, /\.resource-freezer-overview/);
   assert.match(styles, /\.resource-drawer-stage/);
   assert.match(styles, /\.resource-drawer-depth-axis/);
+  assert.match(styles, /\.resource-drawer-slot\s*\{[\s\S]*position:\s*absolute/);
   assert.doesNotMatch(styles, /perspective:\s*520px/);
   assert.doesNotMatch(styles, /rotateY\(/);
   assert.match(styles, /resource-workspace-pending/);

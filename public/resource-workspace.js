@@ -165,7 +165,13 @@ if (info) {
     row.append(selectCell, titleCell, categoryCell, statusCell, updatedCell, locationCell, actionsCell);
     const select = () => selectResource(resource.id, true);
     resource.checkbox.addEventListener('change', () => {
-      if (resource.checkbox.checked) select();
+      if (resource.checkbox.checked) {
+        select();
+      } else if (Number(state.selectedItemId) === resource.id) {
+        const fallback = document.querySelector('[data-action="checkbox-entity"]:checked')?.closest('.resource-workspace-row');
+        if (fallback) selectResource(Number(fallback.dataset.resourceId));
+        else clearResourcePreview();
+      }
       updateSelectionTools();
     });
     titleLink.addEventListener('click', (event) => {
@@ -400,25 +406,39 @@ if (info) {
     const columns = Number(location?.column_count || 0);
     if (!rows || !columns) return '';
     const slots = generateSlotGrid(rows, columns);
-    const cells = ['<span class="resource-drawer-axis resource-drawer-corner"></span>'];
+    const depthStep = 27;
+    const depthRise = 4;
+    const rowStep = 18;
+    const slotWidth = 42;
+    const slotHeight = 22;
+    const stackWidth = slotWidth + ((columns - 1) * depthStep);
+    const stackHeight = slotHeight + ((columns - 1) * depthRise) + ((rows - 1) * rowStep);
+    const depthLabels = [];
+    const cells = [];
     for (let column = 1; column <= columns; column += 1) {
-      cells.push(`<span class="resource-drawer-axis">${column}</span>`);
+      depthLabels.push(`<span style="left:${((column - 1) * depthStep) + (slotWidth / 2)}px">${column}</span>`);
     }
     for (let row = 1; row <= rows; row += 1) {
       const rowSlots = slots.filter((slot) => slot.row === row);
-      cells.push(`<span class="resource-drawer-axis is-row">${escapeHtml(rowSlots[0]?.rowLabel || '')}</span>`);
+      const labelTop = ((row - 1) * rowStep) + ((columns - 1) * depthRise) + (slotHeight / 2);
+      cells.push(`<span class="resource-drawer-row-label" style="top:${labelTop}px">${escapeHtml(rowSlots[0]?.rowLabel || '')}</span>`);
       rowSlots.forEach((slot) => {
         const selected = slot.code === String(highlightCode || '').toUpperCase();
-        cells.push(`<span class="resource-drawer-slot${selected ? ' is-selected' : ''}" title="${escapeHtml(slot.code)}">${selected ? escapeHtml(slot.code) : ''}</span>`);
+        const depth = slot.column - 1;
+        const left = depth * depthStep;
+        const top = ((row - 1) * rowStep) + ((columns - 1 - depth) * depthRise);
+        const layer = (row * 10) + (columns - depth);
+        cells.push(`<span class="resource-drawer-slot${selected ? ' is-selected' : ''}" style="left:${left}px;top:${top}px;z-index:${layer}" title="${escapeHtml(slot.code)}">${selected ? escapeHtml(slot.code) : ''}</span>`);
       });
     }
     return `
       <div class="resource-drawer-stage">
-        <div class="resource-drawer-rack">
+        <div class="resource-drawer-rack" style="--resource-drawer-stack-width:${stackWidth}px;--resource-drawer-stack-height:${stackHeight}px">
           <div class="resource-drawer-depth-axis" aria-label="${escapeHtml(copy.drawerDirection)}">
             <span>${escapeHtml(copy.drawerFront)}</span><i aria-hidden="true"></i><span>${escapeHtml(copy.drawerBack)}</span>
           </div>
-          <div class="resource-drawer-grid" style="--resource-drawer-columns:${columns}">${cells.join('')}</div>
+          <div class="resource-drawer-depth-labels" aria-hidden="true">${depthLabels.join('')}</div>
+          <div class="resource-drawer-grid">${cells.join('')}</div>
         </div>
       </div>`;
   }
@@ -592,6 +612,16 @@ if (info) {
     state.panel?.classList.remove('is-open');
     state.backdrop?.classList.remove('is-open');
     document.body.classList.remove('resource-location-sheet-open');
+  }
+
+  function clearResourcePreview() {
+    state.selectedItemId = null;
+    state.selectedAssignmentId = null;
+    document.querySelectorAll('.resource-workspace-row').forEach((row) => {
+      row.classList.remove('is-selected');
+      row.setAttribute('aria-selected', 'false');
+    });
+    renderFreezerOverview();
   }
 
   function selectResource(itemId, shouldOpenMobile = false) {

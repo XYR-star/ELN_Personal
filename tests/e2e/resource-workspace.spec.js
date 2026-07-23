@@ -88,6 +88,8 @@ test('resource table and storage preview preserve native controls', async ({ pag
   await checkbox.click();
   await expect(page.locator('#withSelected')).toBeHidden();
   await expect(page.locator('.resource-selection-control')).toBeHidden();
+  await expect(page.locator('.resource-location-summary h2')).toHaveText(/Freezer overview|冰箱总览/);
+  await expect(page.locator('.resource-freezer-overview')).toBeVisible();
 
   await expect(page.locator('[data-action="toggle-select-all-entities"]')).toBeVisible();
   await expect(page.locator('thead .resource-col-select [data-action="toggle-select-all-entities"]')).toHaveCount(1);
