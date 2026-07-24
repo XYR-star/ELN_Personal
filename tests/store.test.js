@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -42,6 +42,38 @@ test('PlannerStore keeps concurrent plans instead of overwriting the same snapsh
     const plans = await store.list();
     assert.equal(plans.length, titles.length);
     assert.deepEqual(new Set(plans.map((plan) => plan.title)), new Set(titles));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('PlannerStore preserves same-day plans of different types across independent instances', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'planner-store-multi-instance-'));
+  const file = path.join(dir, 'plans.json');
+  try {
+    const firstStore = new PlannerStore(file);
+    const secondStore = new PlannerStore(file);
+    const existing = await firstStore.create({
+      title: 'Existing Friday plan',
+      type: 'other',
+      start: '2026-07-24T09:00'
+    });
+
+    await Promise.all([
+      firstStore.create({ title: 'Cell passage', type: 'cell_passage', start: '2026-07-24T10:30' }),
+      secondStore.create({ title: 'PCR', type: 'pcr', start: '2026-07-24T13:00' })
+    ]);
+
+    const plans = await firstStore.list();
+    assert.deepEqual(new Set(plans.map((plan) => plan.title)), new Set(['Existing Friday plan', 'Cell passage', 'PCR']));
+    assert.equal((await firstStore.get(existing.id)).type, 'other');
+
+    const history = (await readFile(`${file}.history.jsonl`, 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    assert.ok(history.some((snapshot) => snapshot.plans.some((plan) => plan.id === existing.id)));
+    assert.deepEqual((await readdir(dir)).filter((name) => name.endsWith('.tmp') || name.endsWith('.lock')), []);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 
 function loadLocalEnv(file = '.env.e2e') {
@@ -59,6 +60,7 @@ test('same-day plans remain distinct after save another and reload', async ({ pa
   await expect(page.locator('#plan-dialog[open]')).toBeVisible();
   await expect(page.locator('#plan-form input[name="id"]')).toHaveValue('');
   await page.locator('#plan-form input[name="title"]').fill(titles[1]);
+  await page.locator('#type-select').selectOption('cell_passage');
   await page.locator('#plan-form button[type="submit"]:not([data-save-another])').click();
 
   await expect(page.locator('#selected-list')).toContainText(titles[0]);
@@ -70,6 +72,16 @@ test('same-day plans remain distinct after save another and reload', async ({ pa
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('#selected-list')).toContainText(titles[0]);
   await expect(page.locator('#selected-list')).toContainText(titles[1]);
+  const savedPlans = await page.evaluate(async (planTitles) => {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const headers = { 'X-Requested-With': 'XMLHttpRequest', ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) };
+    const response = await fetch(`/planner-api.php?path=${encodeURIComponent('/api/plans')}`, { headers });
+    return (await response.json()).filter((plan) => planTitles.includes(plan.title));
+  }, titles);
+  assert.deepEqual(new Map(savedPlans.map((plan) => [plan.title, plan.type])), new Map([
+    [titles[0], 'other'],
+    [titles[1], 'cell_passage']
+  ]));
 
   await deletePlansByTitle(page, titles);
   cleanupTitles = [];
